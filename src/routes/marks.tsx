@@ -66,6 +66,41 @@ function MarksEntry() {
     }
     toast.success(`Saved marks for ${count} student${count === 1 ? "" : "s"}`);
   };
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !assessment) return;
+    try {
+      const rows = await parseMarks(file);
+      if (rows.length === 0) {
+        toast.error("No valid rows found. Need regNo and marks columns.");
+        return;
+      }
+      const clamped = rows.map((r) => ({
+        regNo: r.regNo,
+        marks: Math.max(0, Math.min(r.marks, assessment.totalMarks)),
+      }));
+      const { matched, unmatched } = setMarksByRegNo(assessment.id, clamped);
+      // reflect imported values in the editable draft
+      setDraft((prev) => {
+        const next = { ...prev };
+        for (const r of clamped) {
+          const student = students.find(
+            (s) => s.regNo.trim().toLowerCase() === r.regNo.trim().toLowerCase(),
+          );
+          if (student) next[student.id] = String(r.marks);
+        }
+        return next;
+      });
+      toast.success(
+        `Imported marks for ${matched} student(s).` +
+          (unmatched.length ? ` ${unmatched.length} reg no(s) not matched.` : ""),
+      );
+    } catch {
+      toast.error("Could not read that file. Use the marks template.");
+    }
+  };
+
 
   return (
     <div>
