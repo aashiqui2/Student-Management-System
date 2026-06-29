@@ -16,6 +16,7 @@ import { Route as StudentsNewRouteImport } from './routes/students.new'
 import { Route as StudentsIdRouteImport } from './routes/students.$id'
 import { Route as AssessmentsNewRouteImport } from './routes/assessments.new'
 import { Route as StudentsEditIdRouteImport } from './routes/students.edit.$id'
+import { Route as AssessmentsEditIdRouteImport } from './routes/assessments.edit.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -52,6 +53,11 @@ const StudentsEditIdRoute = StudentsEditIdRouteImport.update({
   path: '/students/edit/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AssessmentsEditIdRoute = AssessmentsEditIdRouteImport.update({
+  id: '/assessments/edit/$id',
+  path: '/assessments/edit/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/students/new': typeof StudentsNewRoute
   '/assessments/': typeof AssessmentsIndexRoute
   '/students/': typeof StudentsIndexRoute
+  '/assessments/edit/$id': typeof AssessmentsEditIdRoute
   '/students/edit/$id': typeof StudentsEditIdRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/students/new': typeof StudentsNewRoute
   '/assessments': typeof AssessmentsIndexRoute
   '/students': typeof StudentsIndexRoute
+  '/assessments/edit/$id': typeof AssessmentsEditIdRoute
   '/students/edit/$id': typeof StudentsEditIdRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/students/new': typeof StudentsNewRoute
   '/assessments/': typeof AssessmentsIndexRoute
   '/students/': typeof StudentsIndexRoute
+  '/assessments/edit/$id': typeof AssessmentsEditIdRoute
   '/students/edit/$id': typeof StudentsEditIdRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/students/new'
     | '/assessments/'
     | '/students/'
+    | '/assessments/edit/$id'
     | '/students/edit/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/students/new'
     | '/assessments'
     | '/students'
+    | '/assessments/edit/$id'
     | '/students/edit/$id'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/students/new'
     | '/assessments/'
     | '/students/'
+    | '/assessments/edit/$id'
     | '/students/edit/$id'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   StudentsNewRoute: typeof StudentsNewRoute
   AssessmentsIndexRoute: typeof AssessmentsIndexRoute
   StudentsIndexRoute: typeof StudentsIndexRoute
+  AssessmentsEditIdRoute: typeof AssessmentsEditIdRoute
   StudentsEditIdRoute: typeof StudentsEditIdRoute
 }
 
@@ -172,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentsEditIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/assessments/edit/$id': {
+      id: '/assessments/edit/$id'
+      path: '/assessments/edit/$id'
+      fullPath: '/assessments/edit/$id'
+      preLoaderRoute: typeof AssessmentsEditIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   StudentsNewRoute: StudentsNewRoute,
   AssessmentsIndexRoute: AssessmentsIndexRoute,
   StudentsIndexRoute: StudentsIndexRoute,
+  AssessmentsEditIdRoute: AssessmentsEditIdRoute,
   StudentsEditIdRoute: StudentsEditIdRoute,
 }
 export const routeTree = rootRouteImport
