@@ -36,11 +36,18 @@ export interface Student {
   endYear?: string;
 }
 
+export interface AssessmentResource {
+  name: string;
+  type: string; // mime type or extension
+  dataUrl: string; // base64 data URL
+}
+
 export interface Assessment {
   id: string;
   assessmentName: string;
   dateConducted: string; // ISO date
   totalMarks: number;
+  resources?: AssessmentResource[];
 }
 
 /** key: `${studentId}:${assessmentId}` -> marks scored */
