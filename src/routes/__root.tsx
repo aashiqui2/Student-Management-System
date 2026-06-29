@@ -7,10 +7,13 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { SMSProvider } from "../lib/sms-data";
+import { Sidebar } from "../components/sms/Sidebar";
+import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
   return (
