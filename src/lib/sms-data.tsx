@@ -264,6 +264,47 @@ export function SMSProvider({ children }: { children: ReactNode }) {
       setStudents((prev) => [...prev, created]);
       return created;
     },
+    addStudentsBulk: (rows) => {
+      let added = 0;
+      let updated = 0;
+      setStudents((prev) => {
+        const next = [...prev];
+        for (const row of rows) {
+          const idx = next.findIndex(
+            (p) => p.regNo.trim().toLowerCase() === row.regNo.trim().toLowerCase(),
+          );
+          if (idx >= 0) {
+            next[idx] = { ...next[idx], ...row };
+            updated += 1;
+          } else {
+            next.push({ ...row, id: uid() });
+            added += 1;
+          }
+        }
+        return next;
+      });
+      return { added, updated };
+    },
+    setMarksByRegNo: (assessmentId, rows) => {
+      const unmatched: string[] = [];
+      let matched = 0;
+      setMarks((prev) => {
+        const next = { ...prev };
+        for (const row of rows) {
+          const student = students.find(
+            (s) => s.regNo.trim().toLowerCase() === row.regNo.trim().toLowerCase(),
+          );
+          if (!student) {
+            unmatched.push(row.regNo);
+            continue;
+          }
+          next[`${student.id}:${assessmentId}`] = row.marks;
+          matched += 1;
+        }
+        return next;
+      });
+      return { matched, unmatched };
+    },
     updateStudent: (id, s) =>
       setStudents((prev) => prev.map((p) => (p.id === id ? { ...s, id } : p))),
     deleteStudent: (id) => {
