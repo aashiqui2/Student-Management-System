@@ -111,11 +111,36 @@ function MarksEntry() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Marks Entry</h1>
         </div>
-        <Button onClick={save} disabled={!selected}>
-          <Save className="mr-2 h-4 w-4" />
-          Save Marks
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={handleImport}
+          />
+          <Button
+            variant="outline"
+            onClick={() => downloadMarksTemplate(assessment?.totalMarks ?? 100)}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Template
+          </Button>
+          <Button
+            variant="outline"
+            disabled={!selected}
+            onClick={() => fileInput.current?.click()}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Import Excel
+          </Button>
+          <Button onClick={save} disabled={!selected}>
+            <Save className="mr-2 h-4 w-4" />
+            Save Marks
+          </Button>
+        </div>
       </div>
+
 
       <Card className="mb-5">
         <CardContent className="flex flex-wrap items-end gap-6 p-5">
