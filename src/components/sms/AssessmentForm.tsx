@@ -8,7 +8,6 @@ import {
   type Assessment,
   type AssessmentResource,
 } from "@/lib/sms-data";
-import { fileToDataUrl } from "@/lib/excel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,9 +27,8 @@ export function AssessmentForm({ id }: { id?: string }) {
   const isEdit = Boolean(id);
   const existing = id ? getAssessment(id) : undefined;
   const fileInput = useRef<HTMLInputElement>(null);
-  const [resources, setResources] = useState<AssessmentResource[]>(
-    existing?.resources ?? [],
-  );
+  const [resources, setResources] = useState<AssessmentResource[]>(existing?.resources ?? []);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const {
     register,
@@ -46,28 +44,18 @@ export function AssessmentForm({ id }: { id?: string }) {
       : { assessmentName: "", dateConducted: "", totalMarks: 100 },
   });
 
-  const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     if (files.length === 0) return;
-    try {
-      const added: AssessmentResource[] = [];
-      for (const file of files) {
-        const dataUrl = await fileToDataUrl(file);
-        added.push({ name: file.name, type: file.type || "file", dataUrl });
-      }
-      setResources((prev) => [...prev, ...added]);
-      toast.success(`Added ${added.length} resource file(s).`);
-    } catch {
-      toast.error("Could not read one of the files.");
-    }
+    setPendingFiles((prev) => [...prev, ...files]);
+    toast.success(`Added ${files.length} resource file(s).`);
   };
 
-  const removeResource = (idx: number) =>
-    setResources((prev) => prev.filter((_, i) => i !== idx));
+  const removePendingFile = (idx: number) =>
+    setPendingFiles((prev) => prev.filter((_, i) => i !== idx));
 
-
-  const onSubmit = (data: FormValues) => {
+  const onSubmit = async (data: FormValues) => {
     const payload: Omit<Assessment, "id"> = {
       assessmentName: data.assessmentName,
       dateConducted: data.dateConducted,
@@ -75,14 +63,22 @@ export function AssessmentForm({ id }: { id?: string }) {
       resources,
     };
 
-    if (isEdit && id) {
-      updateAssessment(id, payload);
-      toast.success("Assessment updated");
-    } else {
-      addAssessment(payload);
-      toast.success("Assessment created");
+    try {
+      if (isEdit && id) {
+        await updateAssessment(id, payload, pendingFiles);
+        toast.success("Assessment updated");
+      } else {
+        await addAssessment(payload, pendingFiles);
+        toast.success("Assessment created");
+      }
+      navigate({ to: "/assessments" });
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to save assessment. Please try again.",
+      );
     }
-    navigate({ to: "/assessments" });
   };
 
   return (
@@ -168,40 +164,59 @@ export function AssessmentForm({ id }: { id?: string }) {
                 Attach question papers in PDF, Word, Excel, or SQL files.
               </p>
               {resources.length > 0 ? (
-                <ul className="divide-y rounded-md border">
-                  {resources.map((r, i) => (
-                    <li
-                      key={`${r.name}-${i}`}
-                      className="flex items-center justify-between gap-3 px-3 py-2"
-                    >
-                      <span className="flex min-w-0 items-center gap-2">
-                        <FileText className="h-4 w-4 shrink-0 text-primary" />
-                        <span className="truncate text-sm">{r.name}</span>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <a href={r.dataUrl} download={r.name}>
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Existing resources</div>
+                  <ul className="divide-y rounded-md border">
+                    {resources.map((r, i) => (
+                      <li
+                        key={`${r.name}-${i}`}
+                        className="flex items-center justify-between gap-3 px-3 py-2"
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          <FileText className="h-4 w-4 shrink-0 text-primary" />
+                          <span className="truncate text-sm">{r.name}</span>
+                        </span>
+                        <a href={r.downloadUrl} target="_blank" rel="noreferrer">
                           <Button type="button" variant="ghost" size="icon">
                             <Download className="h-4 w-4" />
                           </Button>
                         </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {pendingFiles.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">New files to upload</div>
+                  <ul className="divide-y rounded-md border">
+                    {pendingFiles.map((file, i) => (
+                      <li
+                        key={`${file.name}-${i}`}
+                        className="flex items-center justify-between gap-3 px-3 py-2"
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          <FileText className="h-4 w-4 shrink-0 text-primary" />
+                          <span className="truncate text-sm">{file.name}</span>
+                        </span>
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
                           className="text-destructive hover:text-destructive"
-                          onClick={() => removeResource(i)}
+                          onClick={() => removePendingFile(i)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : resources.length === 0 ? (
                 <p className="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">
                   No resource files attached yet.
                 </p>
-              )}
+              ) : null}
             </div>
 
 

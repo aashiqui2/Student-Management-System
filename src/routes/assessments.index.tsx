@@ -78,8 +78,9 @@ function AssessmentList() {
                             {a.resources.map((r, i) => (
                               <a
                                 key={`${r.name}-${i}`}
-                                href={r.dataUrl}
-                                download={r.name}
+                                href={r.downloadUrl}
+                                target="_blank"
+                                rel="noreferrer"
                                 className="inline-flex max-w-[160px] items-center gap-1 rounded-md border bg-accent px-2 py-1 text-xs text-primary hover:underline"
                                 title={r.name}
                               >

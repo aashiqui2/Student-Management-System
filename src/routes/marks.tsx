@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { PencilRuler, Save, Upload, Download } from "lucide-react";
+import { api } from "@/lib/api";
 import { useSMS } from "@/lib/sms-data";
-import { parseMarks, downloadMarksTemplate } from "@/lib/excel";
+import { downloadMarksTemplate } from "@/lib/excel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +33,7 @@ export const Route = createFileRoute("/marks")({
 });
 
 function MarksEntry() {
+  const queryClient = useQueryClient();
   const { assessments, students, marks, setMark, setMarksByRegNo } = useSMS();
   const [selected, setSelected] = useState<string>("");
   const [draft, setDraft] = useState<Record<string, string>>({});
@@ -49,21 +52,22 @@ function MarksEntry() {
     setDraft(next);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!assessment) return;
     let count = 0;
     for (const s of students) {
       const raw = draft[s.id];
       if (raw === undefined || raw === "") {
-        setMark(s.id, assessment.id, null);
+        await setMark(s.id, assessment.id, null);
         continue;
       }
       const val = Number(raw);
       if (Number.isNaN(val)) continue;
       const clamped = Math.max(0, Math.min(val, assessment.totalMarks));
-      setMark(s.id, assessment.id, clamped);
+      await setMark(s.id, assessment.id, clamped);
       count += 1;
     }
+    await queryClient.invalidateQueries(["marks"]);
     toast.success(`Saved marks for ${count} student${count === 1 ? "" : "s"}`);
   };
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,33 +75,18 @@ function MarksEntry() {
     e.target.value = "";
     if (!file || !assessment) return;
     try {
-      const rows = await parseMarks(file);
-      if (rows.length === 0) {
-        toast.error("No valid rows found. Need regNo and marks columns.");
-        return;
-      }
-      const clamped = rows.map((r) => ({
-        regNo: r.regNo,
-        marks: Math.max(0, Math.min(r.marks, assessment.totalMarks)),
-      }));
-      const { matched, unmatched } = setMarksByRegNo(assessment.id, clamped);
-      // reflect imported values in the editable draft
-      setDraft((prev) => {
-        const next = { ...prev };
-        for (const r of clamped) {
-          const student = students.find(
-            (s) => s.regNo.trim().toLowerCase() === r.regNo.trim().toLowerCase(),
-          );
-          if (student) next[student.id] = String(r.marks);
-        }
-        return next;
-      });
-      toast.success(
-        `Imported marks for ${matched} student(s).` +
-          (unmatched.length ? ` ${unmatched.length} reg no(s) not matched.` : ""),
+      const result = await api.uploadMarksExcel(file, assessment.id);
+      await queryClient.invalidateQueries(["marks"]);
+      await queryClient.invalidateQueries(["students"]);
+      const added = Number(result.successCount ?? 0);
+      const failed = Number(result.failedCount ?? 0);
+      toast.success(`Imported ${added} rows. ${failed} failed.`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not upload that file. Use the marks template.",
       );
-    } catch {
-      toast.error("Could not read that file. Use the marks template.");
     }
   };
 

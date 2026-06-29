@@ -1,8 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Plus, Pencil, Trash2, Users, Search, Upload, Download } from "lucide-react";
+import { api } from "@/lib/api";
 import { useSMS } from "@/lib/sms-data";
-import { parseStudents, downloadStudentTemplate } from "@/lib/excel";
+import { downloadStudentTemplate } from "@/lib/excel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +36,8 @@ export const Route = createFileRoute("/students/")({
 });
 
 function StudentList() {
-  const { summaries, deleteStudent, addStudentsBulk } = useSMS();
+  const { summaries, deleteStudent } = useSMS();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [toDelete, setToDelete] = useState<string | null>(null);
@@ -45,15 +48,17 @@ function StudentList() {
     e.target.value = "";
     if (!file) return;
     try {
-      const rows = await parseStudents(file);
-      if (rows.length === 0) {
-        toast.error("No valid student rows found in the file.");
-        return;
-      }
-      const { added, updated } = addStudentsBulk(rows);
-      toast.success(`Imported ${added} new, updated ${updated} student(s).`);
-    } catch {
-      toast.error("Could not read that file. Use the Excel template.");
+      const result = await api.uploadStudentsExcel(file);
+      await queryClient.invalidateQueries(["students"]);
+      const added = Number(result.successCount ?? 0);
+      const failed = Number(result.failedCount ?? 0);
+      toast.success(`Imported ${added} students. ${failed} failed.`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not upload that file. Use the Excel template.",
+      );
     }
   };
 

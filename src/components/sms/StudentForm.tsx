@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -43,6 +44,7 @@ function Field({
 export function StudentForm({ id }: { id?: string }) {
   const navigate = useNavigate();
   const { getStudent, addStudent, updateStudent } = useSMS();
+  const [profilePic, setProfilePic] = useState<File | undefined>(undefined);
   const isEdit = Boolean(id);
   const existing = id ? getStudent(id) : undefined;
 
@@ -58,15 +60,23 @@ export function StudentForm({ id }: { id?: string }) {
 
   const pursuingYear = watch("pursuingYear");
 
-  const onSubmit = (data: FormValues) => {
-    if (isEdit && id) {
-      updateStudent(id, data);
-      toast.success("Student updated");
-    } else {
-      addStudent(data);
-      toast.success("Student registered");
+  const onSubmit = async (data: FormValues) => {
+    try {
+      if (isEdit && id) {
+        await updateStudent(id, data, profilePic);
+        toast.success("Student updated");
+      } else {
+        await addStudent(data, profilePic);
+        toast.success("Student registered");
+      }
+      navigate({ to: "/students" });
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to save student. Please try again.",
+      );
     }
-    navigate({ to: "/students" });
   };
 
   return (
@@ -172,6 +182,24 @@ export function StudentForm({ id }: { id?: string }) {
                 <Field label="Instagram URL">
                   <Input {...register("instagramUrl")} />
                 </Field>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="mb-1 text-lg font-bold text-primary">Profile Photo</h2>
+              <Separator className="mb-5" />
+              <div className="space-y-3">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    setProfilePic(file ?? undefined);
+                  }}
+                />
+                {profilePic && (
+                  <p className="text-sm text-muted-foreground">Selected: {profilePic.name}</p>
+                )}
               </div>
             </section>
 

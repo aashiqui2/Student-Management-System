@@ -1,11 +1,6 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, type AssessmentApi, type StudentApi, type StudentCreatePayload } from "./api";
 
 export type PursuingYear =
   | "FIRST_YEAR"
@@ -34,12 +29,14 @@ export interface Student {
   instagramUrl?: string;
   startYear?: string;
   endYear?: string;
+  profilePicUrl?: string;
 }
 
 export interface AssessmentResource {
+  id: string;
   name: string;
-  type: string; // mime type or extension
-  dataUrl: string; // base64 data URL
+  contentType?: string;
+  downloadUrl: string;
 }
 
 export interface Assessment {
@@ -55,6 +52,13 @@ export type MarksMap = Record<string, number>;
 
 export type Category = "Level 1" | "Level 2" | "Level 3" | "Uncategorized";
 
+function categorize(averageMarks: number, attempts: number): Category {
+  if (attempts === 0) return "Uncategorized";
+  if (averageMarks >= 80) return "Level 1";
+  if (averageMarks >= 50) return "Level 2";
+  return "Level 3";
+}
+
 export interface StudentSummary extends Student {
   totalMarks: number;
   averageMarks: number; // average percentage across attempted assessments
@@ -62,105 +66,56 @@ export interface StudentSummary extends Student {
   category: Category;
 }
 
-const uid = () =>
-  (typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : Math.random().toString(36).slice(2)) as string;
-
-// ---- Seed data -------------------------------------------------------------
-
-const seedStudents: Student[] = [
-  {
-    id: "s1",
-    name: "Aarav Sharma",
-    regNo: "21CSE001",
-    email: "aarav.sharma@college.edu",
-    mobileNumber: "9876543210",
-    department: "CSE",
-    pursuingYear: "THIRD_YEAR",
-    hackerRankUsername: "aarav_s",
-    githubUrl: "https://github.com/aarav",
-    startYear: "2021",
-    endYear: "2025",
-  },
-  {
-    id: "s2",
-    name: "Diya Patel",
-    regNo: "21IT014",
-    email: "diya.patel@college.edu",
-    mobileNumber: "9812345678",
-    department: "IT",
-    pursuingYear: "THIRD_YEAR",
-    startYear: "2021",
-    endYear: "2025",
-  },
-  {
-    id: "s3",
-    name: "Rohan Verma",
-    regNo: "21ECE022",
-    email: "rohan.verma@college.edu",
-    department: "ECE",
-    pursuingYear: "SECOND_YEAR",
-    startYear: "2022",
-    endYear: "2026",
-  },
-  {
-    id: "s4",
-    name: "Ishita Nair",
-    regNo: "21CSE045",
-    email: "ishita.nair@college.edu",
-    mobileNumber: "9090909090",
-    department: "CSE",
-    pursuingYear: "FOURTH_YEAR",
-    hackerRankUsername: "ishita_codes",
-    startYear: "2020",
-    endYear: "2024",
-  },
-  {
-    id: "s5",
-    name: "Karthik Reddy",
-    regNo: "21IT008",
-    email: "karthik.reddy@college.edu",
-    department: "IT",
-    pursuingYear: "THIRD_YEAR",
-    startYear: "2021",
-    endYear: "2025",
-  },
-];
-
-const seedAssessments: Assessment[] = [
-  { id: "a1", assessmentName: "Data Structures Quiz", dateConducted: "2026-03-14", totalMarks: 50 },
-  { id: "a2", assessmentName: "Algorithms Midterm", dateConducted: "2026-04-02", totalMarks: 100 },
-  { id: "a3", assessmentName: "Coding Challenge", dateConducted: "2026-05-20", totalMarks: 75 },
-];
-
-const seedMarks: MarksMap = {
-  "s1:a1": 47,
-  "s1:a2": 91,
-  "s1:a3": 70,
-  "s2:a1": 32,
-  "s2:a2": 58,
-  "s2:a3": 49,
-  "s3:a1": 18,
-  "s3:a2": 35,
-  "s4:a1": 49,
-  "s4:a2": 95,
-  "s4:a3": 73,
-  "s5:a1": 28,
-  "s5:a2": 44,
-  "s5:a3": 30,
-};
-
-// ---- Category logic --------------------------------------------------------
-
-export function categorize(averagePct: number, attempts: number): Category {
-  if (attempts === 0) return "Uncategorized";
-  if (averagePct >= 75) return "Level 1";
-  if (averagePct >= 40) return "Level 2";
-  return "Level 3";
+function toStudent(student: StudentApi): Student {
+  return {
+    id: String(student.id),
+    name: student.name,
+    regNo: student.regNo,
+    email: student.email,
+    mobileNumber: student.mobileNumber ?? "",
+    department: student.department ?? "",
+    pursuingYear: (student.pursuingYear as PursuingYear) ?? "",
+    hackerRankUsername: student.hackerRankUsername ?? "",
+    linkedInUrl: student.linkedInUrl ?? "",
+    githubUrl: student.githubUrl ?? "",
+    instagramUrl: student.instagramUrl ?? "",
+    startYear: student.startYear?.toString() ?? "",
+    endYear: student.endYear?.toString() ?? "",
+    profilePicUrl: student.profilePicUrl ?? "",
+  };
 }
 
-// ---- Store -----------------------------------------------------------------
+function toAssessment(assessment: AssessmentApi): Assessment {
+  return {
+    id: String(assessment.id),
+    assessmentName: assessment.assessmentName,
+    dateConducted: assessment.dateConducted,
+    totalMarks: assessment.totalMarks,
+    resources: assessment.resources?.map((resource) => ({
+      id: String(resource.id),
+      name: resource.name,
+      contentType: resource.contentType,
+      downloadUrl: resource.downloadUrl,
+    })) ?? [],
+  };
+}
+
+function toStudentCreatePayload(student: Omit<Student, "id">): StudentCreatePayload {
+  return {
+    name: student.name,
+    regNo: student.regNo,
+    email: student.email,
+    mobileNumber: student.mobileNumber || undefined,
+    department: student.department || undefined,
+    pursuingYear: student.pursuingYear || undefined,
+    hackerRankUsername: student.hackerRankUsername || undefined,
+    startYear: student.startYear ? Number(student.startYear) : undefined,
+    endYear: student.endYear ? Number(student.endYear) : undefined,
+    linkedInUrl: student.linkedInUrl || undefined,
+    githubUrl: student.githubUrl || undefined,
+    instagramUrl: student.instagramUrl || undefined,
+  };
+}
 
 interface SMSContextValue {
   students: Student[];
@@ -170,61 +125,50 @@ interface SMSContextValue {
   getStudent: (id: string) => Student | undefined;
   getSummary: (id: string) => StudentSummary | undefined;
   getAssessment: (id: string) => Assessment | undefined;
-  addStudent: (s: Omit<Student, "id">) => Student;
-  addStudentsBulk: (rows: Omit<Student, "id">[]) => { added: number; updated: number };
-  updateStudent: (id: string, s: Omit<Student, "id">) => void;
-  deleteStudent: (id: string) => void;
-  addAssessment: (a: Omit<Assessment, "id">) => Assessment;
-  updateAssessment: (id: string, a: Omit<Assessment, "id">) => void;
-  deleteAssessment: (id: string) => void;
-  setMark: (studentId: string, assessmentId: string, marks: number | null) => void;
+  addStudent: (s: Omit<Student, "id">, file?: File) => Promise<Student>;
+  addStudentsBulk: (rows: Omit<Student, "id">[]) => Promise<{ added: number; updated: number }>;
+  updateStudent: (id: string, s: Omit<Student, "id">, file?: File) => Promise<Student>;
+  deleteStudent: (id: string) => Promise<void>;
+  addAssessment: (a: Omit<Assessment, "id">, files?: File[]) => Promise<Assessment>;
+  updateAssessment: (id: string, a: Omit<Assessment, "id">, files?: File[]) => Promise<Assessment>;
+  deleteAssessment: (id: string) => Promise<void>;
+  setMark: (studentId: string, assessmentId: string, marks: number | null) => Promise<void>;
   setMarksByRegNo: (
     assessmentId: string,
     rows: { regNo: string; marks: number }[],
-  ) => { matched: number; unmatched: string[] };
-
+  ) => Promise<{ matched: number; unmatched: string[] }>;
+  isLoading: boolean;
+  isError: boolean;
 }
 
 const SMSContext = createContext<SMSContextValue | null>(null);
 
-const STORAGE_KEY = "edutrack-state-v1";
-
-interface PersistShape {
-  students: Student[];
-  assessments: Assessment[];
-  marks: MarksMap;
-}
-
 export function SMSProvider({ children }: { children: ReactNode }) {
-  const [students, setStudents] = useState<Student[]>(seedStudents);
-  const [assessments, setAssessments] = useState<Assessment[]>(seedAssessments);
-  const [marks, setMarks] = useState<MarksMap>(seedMarks);
+  const queryClient = useQueryClient();
 
-  // Hydrate from localStorage after mount (avoids SSR mismatch).
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as PersistShape;
-        if (parsed.students) setStudents(parsed.students);
-        if (parsed.assessments) setAssessments(parsed.assessments);
-        if (parsed.marks) setMarks(parsed.marks);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  const studentsQuery = useQuery({ queryKey: ["students"], queryFn: api.getStudents });
+  const assessmentsQuery = useQuery({ queryKey: ["assessments"], queryFn: api.getAssessments });
+  const marksQuery = useQuery({ queryKey: ["marks"], queryFn: api.getAllMarks });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ students, assessments, marks } satisfies PersistShape),
-      );
-    } catch {
-      /* ignore */
+  const isLoading = studentsQuery.isLoading || assessmentsQuery.isLoading || marksQuery.isLoading;
+  const isError = studentsQuery.isError || assessmentsQuery.isError || marksQuery.isError;
+
+  const students = useMemo(() => {
+    return studentsQuery.data?.map(toStudent) ?? [];
+  }, [studentsQuery.data]);
+
+  const assessments = useMemo(() => {
+    return assessmentsQuery.data?.map(toAssessment) ?? [];
+  }, [assessmentsQuery.data]);
+
+  const marks = useMemo(() => {
+    const next: MarksMap = {};
+    for (const mark of marksQuery.data ?? []) {
+      if (!mark.student || !mark.assessment) continue;
+      next[`${mark.student.id}:${mark.assessment.id}`] = mark.marksScored;
     }
-  }, [students, assessments, marks]);
+    return next;
+  }, [marksQuery.data]);
 
   const summaries = useMemo<StudentSummary[]>(() => {
     return students.map((student) => {
@@ -259,89 +203,90 @@ export function SMSProvider({ children }: { children: ReactNode }) {
     getStudent: (id) => students.find((s) => s.id === id),
     getSummary: (id) => summaries.find((s) => s.id === id),
     getAssessment: (id) => assessments.find((a) => a.id === id),
-    addStudent: (s) => {
-      const created = { ...s, id: uid() };
-      setStudents((prev) => [...prev, created]);
-      return created;
+    isLoading,
+    isError,
+    addStudent: async (s, file) => {
+      const created = await api.createStudent(toStudentCreatePayload(s), file);
+      await queryClient.invalidateQueries(["students"]);
+      return toStudent(created);
     },
-    addStudentsBulk: (rows) => {
+    addStudentsBulk: async (rows) => {
       let added = 0;
       let updated = 0;
-      setStudents((prev) => {
-        const next = [...prev];
-        for (const row of rows) {
-          const idx = next.findIndex(
-            (p) => p.regNo.trim().toLowerCase() === row.regNo.trim().toLowerCase(),
-          );
-          if (idx >= 0) {
-            next[idx] = { ...next[idx], ...row };
-            updated += 1;
-          } else {
-            next.push({ ...row, id: uid() });
-            added += 1;
-          }
+      for (const row of rows) {
+        try {
+          await api.createStudent(toStudentCreatePayload(row));
+          added += 1;
+        } catch {
+          updated += 1;
         }
-        return next;
-      });
+      }
+      await queryClient.invalidateQueries(["students"]);
       return { added, updated };
     },
-    setMarksByRegNo: (assessmentId, rows) => {
+    updateStudent: async (id, s, file) => {
+      const updated = await api.updateStudent(id, toStudentCreatePayload(s), file);
+      await queryClient.invalidateQueries(["students"]);
+      return toStudent(updated);
+    },
+    deleteStudent: async (id) => {
+      await api.deleteStudent(id);
+      await queryClient.invalidateQueries(["students", "marks"]);
+    },
+    addAssessment: async (a, files) => {
+      const created = await api.createAssessment(
+        {
+          assessmentName: a.assessmentName,
+          dateConducted: a.dateConducted,
+          totalMarks: a.totalMarks,
+        },
+        files,
+      );
+      await queryClient.invalidateQueries(["assessments"]);
+      return toAssessment(created);
+    },
+    updateAssessment: async (id, a, files) => {
+      const updated = await api.updateAssessment(
+        id,
+        {
+          assessmentName: a.assessmentName,
+          dateConducted: a.dateConducted,
+          totalMarks: a.totalMarks,
+        },
+        files,
+      );
+      await queryClient.invalidateQueries(["assessments", "marks"]);
+      return toAssessment(updated);
+    },
+    deleteAssessment: async (id) => {
+      await api.deleteAssessment(id);
+      await queryClient.invalidateQueries(["assessments", "marks"]);
+    },
+    setMark: async (studentId, assessmentId, m) => {
+      if (m === null || Number.isNaN(m)) {
+        await api.deleteMark(studentId, assessmentId);
+      } else {
+        await api.assignMark(studentId, assessmentId, m);
+      }
+      await queryClient.invalidateQueries(["marks"]);
+    },
+    setMarksByRegNo: async (assessmentId, rows) => {
       const unmatched: string[] = [];
       let matched = 0;
-      setMarks((prev) => {
-        const next = { ...prev };
-        for (const row of rows) {
-          const student = students.find(
-            (s) => s.regNo.trim().toLowerCase() === row.regNo.trim().toLowerCase(),
-          );
-          if (!student) {
-            unmatched.push(row.regNo);
-            continue;
-          }
-          next[`${student.id}:${assessmentId}`] = row.marks;
-          matched += 1;
+      for (const row of rows) {
+        const student = students.find(
+          (s) => s.regNo.trim().toLowerCase() === row.regNo.trim().toLowerCase(),
+        );
+        if (!student) {
+          unmatched.push(row.regNo);
+          continue;
         }
-        return next;
-      });
+        await api.assignMark(student.id, assessmentId, row.marks);
+        matched += 1;
+      }
+      await queryClient.invalidateQueries(["marks"]);
       return { matched, unmatched };
     },
-    updateStudent: (id, s) =>
-      setStudents((prev) => prev.map((p) => (p.id === id ? { ...s, id } : p))),
-    deleteStudent: (id) => {
-      setStudents((prev) => prev.filter((p) => p.id !== id));
-      setMarks((prev) => {
-        const next: MarksMap = {};
-        for (const k of Object.keys(prev)) {
-          if (!k.startsWith(`${id}:`)) next[k] = prev[k];
-        }
-        return next;
-      });
-    },
-    addAssessment: (a) => {
-      const created = { ...a, id: uid() };
-      setAssessments((prev) => [...prev, created]);
-      return created;
-    },
-    updateAssessment: (id, a) =>
-      setAssessments((prev) => prev.map((p) => (p.id === id ? { ...a, id } : p))),
-    deleteAssessment: (id) => {
-      setAssessments((prev) => prev.filter((p) => p.id !== id));
-      setMarks((prev) => {
-        const next: MarksMap = {};
-        for (const k of Object.keys(prev)) {
-          if (!k.endsWith(`:${id}`)) next[k] = prev[k];
-        }
-        return next;
-      });
-    },
-    setMark: (studentId, assessmentId, m) =>
-      setMarks((prev) => {
-        const key = `${studentId}:${assessmentId}`;
-        const next = { ...prev };
-        if (m === null || Number.isNaN(m)) delete next[key];
-        else next[key] = m;
-        return next;
-      }),
   };
 
   return <SMSContext.Provider value={value}>{children}</SMSContext.Provider>;
