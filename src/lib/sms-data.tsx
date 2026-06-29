@@ -171,12 +171,18 @@ interface SMSContextValue {
   getSummary: (id: string) => StudentSummary | undefined;
   getAssessment: (id: string) => Assessment | undefined;
   addStudent: (s: Omit<Student, "id">) => Student;
+  addStudentsBulk: (rows: Omit<Student, "id">[]) => { added: number; updated: number };
   updateStudent: (id: string, s: Omit<Student, "id">) => void;
   deleteStudent: (id: string) => void;
   addAssessment: (a: Omit<Assessment, "id">) => Assessment;
   updateAssessment: (id: string, a: Omit<Assessment, "id">) => void;
   deleteAssessment: (id: string) => void;
   setMark: (studentId: string, assessmentId: string, marks: number | null) => void;
+  setMarksByRegNo: (
+    assessmentId: string,
+    rows: { regNo: string; marks: number }[],
+  ) => { matched: number; unmatched: string[] };
+
 }
 
 const SMSContext = createContext<SMSContextValue | null>(null);
