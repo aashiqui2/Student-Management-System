@@ -34,10 +34,29 @@ export const Route = createFileRoute("/students/")({
 });
 
 function StudentList() {
-  const { summaries, deleteStudent } = useSMS();
+  const { summaries, deleteStudent, addStudentsBulk } = useSMS();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [toDelete, setToDelete] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const rows = await parseStudents(file);
+      if (rows.length === 0) {
+        toast.error("No valid student rows found in the file.");
+        return;
+      }
+      const { added, updated } = addStudentsBulk(rows);
+      toast.success(`Imported ${added} new, updated ${updated} student(s).`);
+    } catch {
+      toast.error("Could not read that file. Use the Excel template.");
+    }
+  };
+
 
   const filtered = summaries.filter((s) => {
     const q = query.toLowerCase();
