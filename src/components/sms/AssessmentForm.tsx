@@ -1,8 +1,14 @@
 import { useNavigate } from "@tanstack/react-router";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Upload, FileText, Trash2, Download } from "lucide-react";
 import { toast } from "sonner";
-import { useSMS, type Assessment } from "@/lib/sms-data";
+import {
+  useSMS,
+  type Assessment,
+  type AssessmentResource,
+} from "@/lib/sms-data";
+import { fileToDataUrl } from "@/lib/excel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,11 +20,17 @@ type FormValues = {
   totalMarks: number;
 };
 
+const ACCEPTED = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.sql,.txt";
+
 export function AssessmentForm({ id }: { id?: string }) {
   const navigate = useNavigate();
   const { getAssessment, addAssessment, updateAssessment } = useSMS();
   const isEdit = Boolean(id);
   const existing = id ? getAssessment(id) : undefined;
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [resources, setResources] = useState<AssessmentResource[]>(
+    existing?.resources ?? [],
+  );
 
   const {
     register,
@@ -34,12 +46,35 @@ export function AssessmentForm({ id }: { id?: string }) {
       : { assessmentName: "", dateConducted: "", totalMarks: 100 },
   });
 
+  const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    try {
+      const added: AssessmentResource[] = [];
+      for (const file of files) {
+        const dataUrl = await fileToDataUrl(file);
+        added.push({ name: file.name, type: file.type || "file", dataUrl });
+      }
+      setResources((prev) => [...prev, ...added]);
+      toast.success(`Added ${added.length} resource file(s).`);
+    } catch {
+      toast.error("Could not read one of the files.");
+    }
+  };
+
+  const removeResource = (idx: number) =>
+    setResources((prev) => prev.filter((_, i) => i !== idx));
+
+
   const onSubmit = (data: FormValues) => {
     const payload: Omit<Assessment, "id"> = {
       assessmentName: data.assessmentName,
       dateConducted: data.dateConducted,
       totalMarks: Number(data.totalMarks),
+      resources,
     };
+
     if (isEdit && id) {
       updateAssessment(id, payload);
       toast.success("Assessment updated");
@@ -108,6 +143,67 @@ export function AssessmentForm({ id }: { id?: string }) {
                 )}
               </div>
             </div>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <Label>Resources (question files)</Label>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  multiple
+                  accept={ACCEPTED}
+                  className="hidden"
+                  onChange={onUpload}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInput.current?.click()}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Files
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Attach question papers in PDF, Word, Excel, or SQL files.
+              </p>
+              {resources.length > 0 ? (
+                <ul className="divide-y rounded-md border">
+                  {resources.map((r, i) => (
+                    <li
+                      key={`${r.name}-${i}`}
+                      className="flex items-center justify-between gap-3 px-3 py-2"
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <FileText className="h-4 w-4 shrink-0 text-primary" />
+                        <span className="truncate text-sm">{r.name}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <a href={r.dataUrl} download={r.name}>
+                          <Button type="button" variant="ghost" size="icon">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </a>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => removeResource(i)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">
+                  No resource files attached yet.
+                </p>
+              )}
+            </div>
+
 
             <div className="flex justify-end gap-3 pt-2">
               <Button

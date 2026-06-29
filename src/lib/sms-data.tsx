@@ -36,11 +36,18 @@ export interface Student {
   endYear?: string;
 }
 
+export interface AssessmentResource {
+  name: string;
+  type: string; // mime type or extension
+  dataUrl: string; // base64 data URL
+}
+
 export interface Assessment {
   id: string;
   assessmentName: string;
   dateConducted: string; // ISO date
   totalMarks: number;
+  resources?: AssessmentResource[];
 }
 
 /** key: `${studentId}:${assessmentId}` -> marks scored */
@@ -164,12 +171,18 @@ interface SMSContextValue {
   getSummary: (id: string) => StudentSummary | undefined;
   getAssessment: (id: string) => Assessment | undefined;
   addStudent: (s: Omit<Student, "id">) => Student;
+  addStudentsBulk: (rows: Omit<Student, "id">[]) => { added: number; updated: number };
   updateStudent: (id: string, s: Omit<Student, "id">) => void;
   deleteStudent: (id: string) => void;
   addAssessment: (a: Omit<Assessment, "id">) => Assessment;
   updateAssessment: (id: string, a: Omit<Assessment, "id">) => void;
   deleteAssessment: (id: string) => void;
   setMark: (studentId: string, assessmentId: string, marks: number | null) => void;
+  setMarksByRegNo: (
+    assessmentId: string,
+    rows: { regNo: string; marks: number }[],
+  ) => { matched: number; unmatched: string[] };
+
 }
 
 const SMSContext = createContext<SMSContextValue | null>(null);
@@ -250,6 +263,47 @@ export function SMSProvider({ children }: { children: ReactNode }) {
       const created = { ...s, id: uid() };
       setStudents((prev) => [...prev, created]);
       return created;
+    },
+    addStudentsBulk: (rows) => {
+      let added = 0;
+      let updated = 0;
+      setStudents((prev) => {
+        const next = [...prev];
+        for (const row of rows) {
+          const idx = next.findIndex(
+            (p) => p.regNo.trim().toLowerCase() === row.regNo.trim().toLowerCase(),
+          );
+          if (idx >= 0) {
+            next[idx] = { ...next[idx], ...row };
+            updated += 1;
+          } else {
+            next.push({ ...row, id: uid() });
+            added += 1;
+          }
+        }
+        return next;
+      });
+      return { added, updated };
+    },
+    setMarksByRegNo: (assessmentId, rows) => {
+      const unmatched: string[] = [];
+      let matched = 0;
+      setMarks((prev) => {
+        const next = { ...prev };
+        for (const row of rows) {
+          const student = students.find(
+            (s) => s.regNo.trim().toLowerCase() === row.regNo.trim().toLowerCase(),
+          );
+          if (!student) {
+            unmatched.push(row.regNo);
+            continue;
+          }
+          next[`${student.id}:${assessmentId}`] = row.marks;
+          matched += 1;
+        }
+        return next;
+      });
+      return { matched, unmatched };
     },
     updateStudent: (id, s) =>
       setStudents((prev) => prev.map((p) => (p.id === id ? { ...s, id } : p))),

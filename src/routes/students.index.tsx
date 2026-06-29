@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { Plus, Pencil, Trash2, Users, Search } from "lucide-react";
+import { useRef, useState } from "react";
+import { Plus, Pencil, Trash2, Users, Search, Upload, Download } from "lucide-react";
 import { useSMS } from "@/lib/sms-data";
+import { parseStudents, downloadStudentTemplate } from "@/lib/excel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
+
 export const Route = createFileRoute("/students/")({
   head: () => ({
     meta: [
@@ -32,10 +34,29 @@ export const Route = createFileRoute("/students/")({
 });
 
 function StudentList() {
-  const { summaries, deleteStudent } = useSMS();
+  const { summaries, deleteStudent, addStudentsBulk } = useSMS();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [toDelete, setToDelete] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const rows = await parseStudents(file);
+      if (rows.length === 0) {
+        toast.error("No valid student rows found in the file.");
+        return;
+      }
+      const { added, updated } = addStudentsBulk(rows);
+      toast.success(`Imported ${added} new, updated ${updated} student(s).`);
+    } catch {
+      toast.error("Could not read that file. Use the Excel template.");
+    }
+  };
+
 
   const filtered = summaries.filter((s) => {
     const q = query.toLowerCase();
@@ -55,11 +76,29 @@ function StudentList() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Students</h1>
         </div>
-        <Button onClick={() => navigate({ to: "/students/new" })}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Student
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={handleImport}
+          />
+          <Button variant="outline" onClick={() => downloadStudentTemplate()}>
+            <Download className="mr-2 h-4 w-4" />
+            Template
+          </Button>
+          <Button variant="outline" onClick={() => fileInput.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" />
+            Import Excel
+          </Button>
+          <Button onClick={() => navigate({ to: "/students/new" })}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Student
+          </Button>
+        </div>
       </div>
+
 
       <Card>
         <CardContent className="p-0">

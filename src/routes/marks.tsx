@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { PencilRuler, Save } from "lucide-react";
+import { useRef, useState } from "react";
+import { PencilRuler, Save, Upload, Download } from "lucide-react";
 import { useSMS } from "@/lib/sms-data";
+import { parseMarks, downloadMarksTemplate } from "@/lib/excel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/sms/EmptyState";
+
 import {
   Select,
   SelectContent,
@@ -29,9 +31,11 @@ export const Route = createFileRoute("/marks")({
 });
 
 function MarksEntry() {
-  const { assessments, students, marks, setMark } = useSMS();
+  const { assessments, students, marks, setMark, setMarksByRegNo } = useSMS();
   const [selected, setSelected] = useState<string>("");
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const fileInput = useRef<HTMLInputElement>(null);
+
 
   const assessment = assessments.find((a) => a.id === selected);
 
@@ -62,6 +66,41 @@ function MarksEntry() {
     }
     toast.success(`Saved marks for ${count} student${count === 1 ? "" : "s"}`);
   };
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !assessment) return;
+    try {
+      const rows = await parseMarks(file);
+      if (rows.length === 0) {
+        toast.error("No valid rows found. Need regNo and marks columns.");
+        return;
+      }
+      const clamped = rows.map((r) => ({
+        regNo: r.regNo,
+        marks: Math.max(0, Math.min(r.marks, assessment.totalMarks)),
+      }));
+      const { matched, unmatched } = setMarksByRegNo(assessment.id, clamped);
+      // reflect imported values in the editable draft
+      setDraft((prev) => {
+        const next = { ...prev };
+        for (const r of clamped) {
+          const student = students.find(
+            (s) => s.regNo.trim().toLowerCase() === r.regNo.trim().toLowerCase(),
+          );
+          if (student) next[student.id] = String(r.marks);
+        }
+        return next;
+      });
+      toast.success(
+        `Imported marks for ${matched} student(s).` +
+          (unmatched.length ? ` ${unmatched.length} reg no(s) not matched.` : ""),
+      );
+    } catch {
+      toast.error("Could not read that file. Use the marks template.");
+    }
+  };
+
 
   return (
     <div>
@@ -72,11 +111,36 @@ function MarksEntry() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Marks Entry</h1>
         </div>
-        <Button onClick={save} disabled={!selected}>
-          <Save className="mr-2 h-4 w-4" />
-          Save Marks
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={handleImport}
+          />
+          <Button
+            variant="outline"
+            onClick={() => downloadMarksTemplate(assessment?.totalMarks ?? 100)}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Template
+          </Button>
+          <Button
+            variant="outline"
+            disabled={!selected}
+            onClick={() => fileInput.current?.click()}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Import Excel
+          </Button>
+          <Button onClick={save} disabled={!selected}>
+            <Save className="mr-2 h-4 w-4" />
+            Save Marks
+          </Button>
+        </div>
       </div>
+
 
       <Card className="mb-5">
         <CardContent className="flex flex-wrap items-end gap-6 p-5">
