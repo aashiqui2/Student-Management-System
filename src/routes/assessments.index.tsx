@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus, Pencil, Trash2, ClipboardList } from "lucide-react";
+import { Plus, Pencil, Trash2, ClipboardList, FileText } from "lucide-react";
 import { useSMS } from "@/lib/sms-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
