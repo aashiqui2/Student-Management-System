@@ -1,8 +1,14 @@
 import { useNavigate } from "@tanstack/react-router";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Upload, FileText, Trash2, Download } from "lucide-react";
 import { toast } from "sonner";
-import { useSMS, type Assessment } from "@/lib/sms-data";
+import {
+  useSMS,
+  type Assessment,
+  type AssessmentResource,
+} from "@/lib/sms-data";
+import { fileToDataUrl } from "@/lib/excel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,11 +20,17 @@ type FormValues = {
   totalMarks: number;
 };
 
+const ACCEPTED = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.sql,.txt";
+
 export function AssessmentForm({ id }: { id?: string }) {
   const navigate = useNavigate();
   const { getAssessment, addAssessment, updateAssessment } = useSMS();
   const isEdit = Boolean(id);
   const existing = id ? getAssessment(id) : undefined;
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [resources, setResources] = useState<AssessmentResource[]>(
+    existing?.resources ?? [],
+  );
 
   const {
     register,
@@ -33,6 +45,27 @@ export function AssessmentForm({ id }: { id?: string }) {
         }
       : { assessmentName: "", dateConducted: "", totalMarks: 100 },
   });
+
+  const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    try {
+      const added: AssessmentResource[] = [];
+      for (const file of files) {
+        const dataUrl = await fileToDataUrl(file);
+        added.push({ name: file.name, type: file.type || "file", dataUrl });
+      }
+      setResources((prev) => [...prev, ...added]);
+      toast.success(`Added ${added.length} resource file(s).`);
+    } catch {
+      toast.error("Could not read one of the files.");
+    }
+  };
+
+  const removeResource = (idx: number) =>
+    setResources((prev) => prev.filter((_, i) => i !== idx));
+
 
   const onSubmit = (data: FormValues) => {
     const payload: Omit<Assessment, "id"> = {
