@@ -118,11 +118,20 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <SMSProvider>
+        <div className="flex min-h-screen bg-background text-foreground">
+          <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+          <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 md:p-8">
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+          </main>
+        </div>
+        <Toaster richColors position="top-right" />
+      </SMSProvider>
     </QueryClientProvider>
   );
 }
