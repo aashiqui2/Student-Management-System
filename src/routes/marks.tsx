@@ -31,9 +31,11 @@ export const Route = createFileRoute("/marks")({
 });
 
 function MarksEntry() {
-  const { assessments, students, marks, setMark } = useSMS();
+  const { assessments, students, marks, setMark, setMarksByRegNo } = useSMS();
   const [selected, setSelected] = useState<string>("");
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const fileInput = useRef<HTMLInputElement>(null);
+
 
   const assessment = assessments.find((a) => a.id === selected);
 
