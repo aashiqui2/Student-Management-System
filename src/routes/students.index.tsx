@@ -76,11 +76,29 @@ function StudentList() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Students</h1>
         </div>
-        <Button onClick={() => navigate({ to: "/students/new" })}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Student
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={handleImport}
+          />
+          <Button variant="outline" onClick={() => downloadStudentTemplate()}>
+            <Download className="mr-2 h-4 w-4" />
+            Template
+          </Button>
+          <Button variant="outline" onClick={() => fileInput.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" />
+            Import Excel
+          </Button>
+          <Button onClick={() => navigate({ to: "/students/new" })}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Student
+          </Button>
+        </div>
       </div>
+
 
       <Card>
         <CardContent className="p-0">
