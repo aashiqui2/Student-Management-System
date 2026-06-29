@@ -1,0 +1,178 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { PencilRuler, Save } from "lucide-react";
+import { useSMS } from "@/lib/sms-data";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { EmptyState } from "@/components/sms/EmptyState";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/marks")({
+  head: () => ({
+    meta: [
+      { title: "Marks Entry — EduTrack" },
+      { name: "description", content: "Record assessment marks for students." },
+    ],
+  }),
+  component: MarksEntry,
+});
+
+function MarksEntry() {
+  const { assessments, students, marks, setMark } = useSMS();
+  const [selected, setSelected] = useState<string>("");
+  const [draft, setDraft] = useState<Record<string, string>>({});
+
+  const assessment = assessments.find((a) => a.id === selected);
+
+  const onSelect = (id: string) => {
+    setSelected(id);
+    const next: Record<string, string> = {};
+    for (const s of students) {
+      const key = `${s.id}:${id}`;
+      next[s.id] = key in marks ? String(marks[key]) : "";
+    }
+    setDraft(next);
+  };
+
+  const save = () => {
+    if (!assessment) return;
+    let count = 0;
+    for (const s of students) {
+      const raw = draft[s.id];
+      if (raw === undefined || raw === "") {
+        setMark(s.id, assessment.id, null);
+        continue;
+      }
+      const val = Number(raw);
+      if (Number.isNaN(val)) continue;
+      const clamped = Math.max(0, Math.min(val, assessment.totalMarks));
+      setMark(s.id, assessment.id, clamped);
+      count += 1;
+    }
+    toast.success(`Saved marks for ${count} student${count === 1 ? "" : "s"}`);
+  };
+
+  return (
+    <div>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-primary">
+            <PencilRuler className="h-5 w-5" />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight">Marks Entry</h1>
+        </div>
+        <Button onClick={save} disabled={!selected}>
+          <Save className="mr-2 h-4 w-4" />
+          Save Marks
+        </Button>
+      </div>
+
+      <Card className="mb-5">
+        <CardContent className="flex flex-wrap items-end gap-6 p-5">
+          <div className="w-full max-w-xs space-y-1.5">
+            <Label>Select Assessment</Label>
+            <Select value={selected} onValueChange={onSelect}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose an assessment" />
+              </SelectTrigger>
+              <SelectContent>
+                {assessments.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.assessmentName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {assessment && (
+            <div className="flex gap-8">
+              <div>
+                <p className="text-xs text-muted-foreground">Date</p>
+                <p className="font-medium">
+                  {new Date(assessment.dateConducted).toLocaleDateString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Total Marks</p>
+                <p className="font-medium text-primary">{assessment.totalMarks}</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {selected && assessment ? (
+        <Card>
+          <CardContent className="p-0">
+            {students.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50 text-left text-muted-foreground">
+                      <th className="px-5 py-3 font-semibold">Student</th>
+                      <th className="px-5 py-3 font-semibold">Reg No</th>
+                      <th className="px-5 py-3 font-semibold">Department</th>
+                      <th className="px-5 py-3 font-semibold">Marks Scored</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {students.map((s) => (
+                      <tr key={s.id} className="border-b last:border-0">
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9">
+                              <AvatarFallback className="bg-accent text-primary">
+                                {s.name.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-semibold">{s.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 font-mono text-xs">{s.regNo}</td>
+                        <td className="px-5 py-3">
+                          <Badge variant="secondary">{s.department || "N/A"}</Badge>
+                        </td>
+                        <td className="px-5 py-3">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={assessment.totalMarks}
+                            value={draft[s.id] ?? ""}
+                            onChange={(e) =>
+                              setDraft((d) => ({ ...d, [s.id]: e.target.value }))
+                            }
+                            className="w-28"
+                            placeholder={`/ ${assessment.totalMarks}`}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyState message="No students to grade. Add students first." />
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent>
+            <EmptyState message="Select an assessment above to begin entering marks." />
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
