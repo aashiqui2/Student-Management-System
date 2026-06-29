@@ -143,6 +143,67 @@ export function AssessmentForm({ id }: { id?: string }) {
                 )}
               </div>
             </div>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <Label>Resources (question files)</Label>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  multiple
+                  accept={ACCEPTED}
+                  className="hidden"
+                  onChange={onUpload}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInput.current?.click()}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Files
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Attach question papers in PDF, Word, Excel, or SQL files.
+              </p>
+              {resources.length > 0 ? (
+                <ul className="divide-y rounded-md border">
+                  {resources.map((r, i) => (
+                    <li
+                      key={`${r.name}-${i}`}
+                      className="flex items-center justify-between gap-3 px-3 py-2"
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <FileText className="h-4 w-4 shrink-0 text-primary" />
+                        <span className="truncate text-sm">{r.name}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <a href={r.dataUrl} download={r.name}>
+                          <Button type="button" variant="ghost" size="icon">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </a>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => removeResource(i)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">
+                  No resource files attached yet.
+                </p>
+              )}
+            </div>
+
 
             <div className="flex justify-end gap-3 pt-2">
               <Button
