@@ -72,7 +72,9 @@ export function AssessmentForm({ id }: { id?: string }) {
       assessmentName: data.assessmentName,
       dateConducted: data.dateConducted,
       totalMarks: Number(data.totalMarks),
+      resources,
     };
+
     if (isEdit && id) {
       updateAssessment(id, payload);
       toast.success("Assessment updated");
