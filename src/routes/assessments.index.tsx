@@ -58,6 +58,7 @@ function AssessmentList() {
                     <th className="px-5 py-3 font-semibold">Assessment Name</th>
                     <th className="px-5 py-3 font-semibold">Date Conducted</th>
                     <th className="px-5 py-3 font-semibold">Total Marks</th>
+                    <th className="px-5 py-3 font-semibold">Resources</th>
                     <th className="px-5 py-3 text-center font-semibold">Actions</th>
                   </tr>
                 </thead>
@@ -71,6 +72,27 @@ function AssessmentList() {
                       <td className="px-5 py-3">
                         <Badge variant="secondary">{a.totalMarks}</Badge>
                       </td>
+                      <td className="px-5 py-3">
+                        {a.resources && a.resources.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {a.resources.map((r, i) => (
+                              <a
+                                key={`${r.name}-${i}`}
+                                href={r.dataUrl}
+                                download={r.name}
+                                className="inline-flex max-w-[160px] items-center gap-1 rounded-md border bg-accent px-2 py-1 text-xs text-primary hover:underline"
+                                title={r.name}
+                              >
+                                <FileText className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{r.name}</span>
+                              </a>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+
                       <td className="px-5 py-3">
                         <div className="flex items-center justify-center gap-1">
                           <Button
