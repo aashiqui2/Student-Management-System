@@ -29,9 +29,13 @@ export const Route = createFileRoute("/assessments/")({
 });
 
 function AssessmentList() {
-  const { assessments, deleteAssessment } = useSMS();
+  const { assessments, deleteAssessment, deleteAssessmentsBulk, deleteAllAssessments } = useSMS();
+  const { isAdmin } = useAuth();
   const navigate = useNavigate();
   const [toDelete, setToDelete] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
   return (
     <div>
@@ -42,10 +46,26 @@ function AssessmentList() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Assessments</h1>
         </div>
-        <Button onClick={() => navigate({ to: "/assessments/new" })}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Assessment
-        </Button>
+        {isAdmin && (
+          <div className="flex flex-wrap items-center gap-2">
+            {selectedIds.size > 0 && (
+              <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Selected ({selectedIds.size})
+              </Button>
+            )}
+            {assessments.length > 0 && selectedIds.size === 0 && (
+              <Button variant="destructive" onClick={() => setShowDeleteAllConfirm(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete All
+              </Button>
+            )}
+            <Button onClick={() => navigate({ to: "/assessments/new" })}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Assessment
+            </Button>
+          </div>
+        )}
       </div>
 
       <Card>
@@ -55,16 +75,45 @@ function AssessmentList() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50 text-left text-muted-foreground">
+                    {isAdmin && (
+                      <th className="px-5 py-3 w-[40px]">
+                        <input
+                          type="checkbox"
+                          checked={assessments.length > 0 && selectedIds.size === assessments.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedIds(new Set(assessments.map((a) => a.id)));
+                            } else {
+                              setSelectedIds(new Set());
+                            }
+                          }}
+                        />
+                      </th>
+                    )}
                     <th className="px-5 py-3 font-semibold">Assessment Name</th>
                     <th className="px-5 py-3 font-semibold">Date Conducted</th>
                     <th className="px-5 py-3 font-semibold">Total Marks</th>
                     <th className="px-5 py-3 font-semibold">Resources</th>
-                    <th className="px-5 py-3 text-center font-semibold">Actions</th>
+                    {isAdmin && <th className="px-5 py-3 text-center font-semibold">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {assessments.map((a) => (
                     <tr key={a.id} className="border-b transition-colors last:border-0 hover:bg-muted/40">
+                      {isAdmin && (
+                        <td className="px-5 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(a.id)}
+                            onChange={(e) => {
+                              const newSet = new Set(selectedIds);
+                              if (e.target.checked) newSet.add(a.id);
+                              else newSet.delete(a.id);
+                              setSelectedIds(newSet);
+                            }}
+                          />
+                        </td>
+                      )}
                       <td className="px-5 py-3 font-semibold">{a.assessmentName}</td>
                       <td className="px-5 py-3 text-muted-foreground">
                         {new Date(a.dateConducted).toLocaleDateString()}
@@ -94,30 +143,32 @@ function AssessmentList() {
                         )}
                       </td>
 
-                      <td className="px-5 py-3">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              navigate({
-                                to: "/assessments/edit/$id",
-                                params: { id: a.id },
-                              })
-                            }
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setToDelete(a.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
+                      {isAdmin && (
+                        <td className="px-5 py-3">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                navigate({
+                                  to: "/assessments/edit/$id",
+                                  params: { id: a.id },
+                                })
+                              }
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setToDelete(a.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -153,6 +204,55 @@ function AssessmentList() {
               }}
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} assessments?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the selected assessments and all marks recorded against them. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                await deleteAssessmentsBulk(Array.from(selectedIds).map(Number));
+                setSelectedIds(new Set());
+                setShowBulkDeleteConfirm(false);
+                toast.success(`${selectedIds.size} assessments deleted`);
+              }}
+            >
+              Delete Selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showDeleteAllConfirm} onOpenChange={setShowDeleteAllConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete ALL assessments?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove ALL assessments and their marks from the system. This action cannot be undone!
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={async () => {
+                await deleteAllAssessments();
+                setSelectedIds(new Set());
+                setShowDeleteAllConfirm(false);
+                toast.success("All assessments deleted");
+              }}
+            >
+              Delete All
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

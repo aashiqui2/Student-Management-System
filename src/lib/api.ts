@@ -1,18 +1,35 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
 function buildUrl(path: string) {
   return `${API_BASE}${path}`;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = typeof window !== "undefined"
+    ? (() => {
+        const stored = localStorage.getItem("eduTrack_user");
+        return stored ? JSON.parse(stored).token : null;
+      })()
+    : null;
+
+  const headers = new Headers(init?.headers);
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
   const res = await fetch(buildUrl(path), {
     credentials: "include",
     ...init,
+    headers,
   });
 
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`API request failed: ${res.status} ${res.statusText} ${text}`);
+  }
+
+  if (res.status === 204 || res.headers.get("content-length") === "0") {
+    return undefined as unknown as T;
   }
 
   return (await res.json()) as T;
@@ -93,8 +110,20 @@ export const api = {
       method: "PUT",
       body: buildStudentFormData(payload, file),
     }),
+  deleteStudentPhoto: (id: string | number) =>
+    request<void>(`/api/students/${id}/photo`, {
+      method: "DELETE",
+    }),
   deleteStudent: (id: string | number) =>
     request<void>(`/api/students/${id}`, { method: "DELETE" }),
+  deleteStudentsBulk: (ids: number[]) =>
+    request<void>("/api/students/bulk", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(ids),
+    }),
+  deleteAllStudents: () =>
+    request<void>("/api/students/all", { method: "DELETE" }),
   uploadStudentsExcel: (file: File) => {
     const form = new FormData();
     form.set("file", file);
@@ -125,6 +154,14 @@ export const api = {
   },
   deleteAssessment: (id: string | number) =>
     request<void>(`/api/assessments/${id}`, { method: "DELETE" }),
+  deleteAssessmentsBulk: (ids: number[]) =>
+    request<void>("/api/assessments/bulk", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(ids),
+    }),
+  deleteAllAssessments: () =>
+    request<void>("/api/assessments/all", { method: "DELETE" }),
 
   getAllMarks: () => request<StudentAssessmentMarkApi[]>("/api/marks"),
   getMarksForAssessment: (assessmentId: string | number) =>
@@ -149,3 +186,7 @@ export const api = {
     });
   },
 };
+
+export function getReportDownloadUrl(format: "excel" | "pdf", filter: string) {
+  return `${API_BASE}/api/dashboard/export?format=${format}&filter=${encodeURIComponent(filter)}`;
+}

@@ -12,6 +12,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SMSProvider } from "../lib/sms-data";
+import { AuthProvider, useAuth } from "../lib/auth";
 import { Sidebar } from "../components/sms/Sidebar";
 import { Toaster } from "../components/ui/sonner";
 
@@ -122,20 +123,50 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SMSProvider>
-        <div className="flex min-h-screen bg-background text-foreground">
-          <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
-          <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 md:p-8">
-            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-            <Outlet />
-          </main>
-        </div>
-        <Toaster richColors position="top-right" />
-      </SMSProvider>
+      <AuthProvider>
+        <SMSProvider>
+          <AppLayout />
+          <Toaster richColors position="top-right" />
+        </SMSProvider>
+      </AuthProvider>
     </QueryClientProvider>
+  );
+}
+
+function AppLayout() {
+  const [collapsed, setCollapsed] = useState(false);
+  const router = useRouter();
+  const { user } = useAuth();
+  const pathname = router.state.location.pathname;
+  const isPublic = pathname === "/" || pathname === "/login" || pathname === "/signup";
+
+  useEffect(() => {
+    if (!isPublic && !user) {
+      router.navigate({ to: "/login" });
+    }
+  }, [isPublic, user, router]);
+
+  if (!isPublic && !user) {
+    return null;
+  }
+
+  if (isPublic) {
+    return (
+      <main className="w-full">
+        <Outlet />
+      </main>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen bg-background text-foreground">
+      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+      <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 md:p-8">
+        <Outlet />
+      </main>
+    </div>
   );
 }

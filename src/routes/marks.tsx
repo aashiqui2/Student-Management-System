@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PencilRuler, Save, Upload, Download } from "lucide-react";
 import { api } from "@/lib/api";
 import { useSMS } from "@/lib/sms-data";
@@ -12,6 +12,12 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/sms/EmptyState";
+import { toast } from "sonner";
+
+type ImportIssue = {
+  row?: number;
+  reason: string;
+};
 
 import {
   Select,
@@ -20,7 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/marks")({
   head: () => ({
@@ -37,6 +42,8 @@ function MarksEntry() {
   const { assessments, students, marks, setMark, setMarksByRegNo } = useSMS();
   const [selected, setSelected] = useState<string>("");
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [importErrors, setImportErrors] = useState<ImportIssue[]>([]);
+  const [showImportErrors, setShowImportErrors] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
 
@@ -44,13 +51,17 @@ function MarksEntry() {
 
   const onSelect = (id: string) => {
     setSelected(id);
+  };
+
+  useEffect(() => {
+    if (!selected) return;
     const next: Record<string, string> = {};
     for (const s of students) {
-      const key = `${s.id}:${id}`;
+      const key = `${s.id}:${selected}`;
       next[s.id] = key in marks ? String(marks[key]) : "";
     }
     setDraft(next);
-  };
+  }, [selected, students, marks]);
 
   const save = async () => {
     if (!assessment) return;
@@ -67,7 +78,7 @@ function MarksEntry() {
       await setMark(s.id, assessment.id, clamped);
       count += 1;
     }
-    await queryClient.invalidateQueries(["marks"]);
+    await queryClient.invalidateQueries({ queryKey: [] });
     toast.success(`Saved marks for ${count} student${count === 1 ? "" : "s"}`);
   };
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,11 +87,35 @@ function MarksEntry() {
     if (!file || !assessment) return;
     try {
       const result = await api.uploadMarksExcel(file, assessment.id);
-      await queryClient.invalidateQueries(["marks"]);
-      await queryClient.invalidateQueries(["students"]);
-      const added = Number(result.successCount ?? 0);
+      await queryClient.invalidateQueries({ queryKey: [] });
+      await queryClient.invalidateQueries({ queryKey: [] });
+
+      const inserted = Number(result.marksInserted ?? 0);
+      const updated = Number(result.marksUpdated ?? 0);
       const failed = Number(result.failedCount ?? 0);
-      toast.success(`Imported ${added} rows. ${failed} failed.`);
+      const skipped = Number(result.skippedCount ?? 0);
+
+      if (failed > 0 || skipped > 0) {
+        console.warn("Marks import errors:", result.errors);
+        
+        let errorDetails = result.errors as ImportIssue[];
+        if (result.skippedRegNos && Array.isArray(result.skippedRegNos) && result.skippedRegNos.length > 0) {
+          const skippedIssue = {
+            reason: `Unknown Register Numbers: ${result.skippedRegNos.join(", ")}`
+          };
+          errorDetails = [skippedIssue, ...errorDetails];
+        }
+        
+        setImportErrors(errorDetails);
+        setShowImportErrors(true);
+
+        toast(
+          `Import Successful. Marks Inserted: ${inserted}, Marks Updated: ${updated}, Skipped Rows: ${skipped}, Errors: ${failed}`,
+          { style: { background: "#f8d7da", color: "#721c24" } },
+        );
+      } else {
+        toast.success(`Import Successful. Marks Inserted: ${inserted}, Marks Updated: ${updated}, Skipped Rows: ${skipped}, Errors: ${failed}`);
+      }
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -89,7 +124,6 @@ function MarksEntry() {
       );
     }
   };
-
 
   return (
     <div>
@@ -129,6 +163,23 @@ function MarksEntry() {
           </Button>
         </div>
       </div>
+      {importErrors.length > 0 && (
+        <Card className="mb-5 border border-destructive/20 bg-destructive/5">
+          <CardContent>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold text-destructive">Import errors detected</p>
+                <p className="text-sm text-muted-foreground">
+                  {importErrors.length} row{importErrors.length === 1 ? "" : "s"} failed.
+                </p>
+              </div>
+              <Button variant="ghost" onClick={() => setShowImportErrors(true)}>
+                View details
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
 
       <Card className="mb-5">

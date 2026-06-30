@@ -1,223 +1,123 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip as RTooltip,
-  Legend,
-} from "recharts";
-import {
-  Users,
-  Trophy,
-  ClipboardCheck,
-  TrendingDown,
-  Download,
-} from "lucide-react";
-import { useSMS, type Category } from "@/lib/sms-data";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CategoryBadge } from "@/components/sms/CategoryBadge";
-import { EmptyState } from "@/components/sms/EmptyState";
-import {
-  Avatar,
-  AvatarFallback,
-} from "@/components/ui/avatar";
-import { toast } from "sonner";
+import { GraduationCap, BookOpen, ShieldCheck, TrendingUp } from "lucide-react";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Dashboard — EduTrack" },
-      {
-        name: "description",
-        content:
-          "Track student performance, categories and assessment results at a glance.",
-      },
-    ],
-  }),
-  component: Dashboard,
+  component: LandingPage,
 });
 
-type Filter = "All" | Category;
-
-function Dashboard() {
-  const { summaries } = useSMS();
-  const [filter, setFilter] = useState<Filter>("All");
-
-  const stats = useMemo(() => {
-    return {
-      total: summaries.length,
-      level1: summaries.filter((s) => s.category === "Level 1").length,
-      level2: summaries.filter((s) => s.category === "Level 2").length,
-      level3: summaries.filter((s) => s.category === "Level 3").length,
-    };
-  }, [summaries]);
-
-  const filtered =
-    filter === "All"
-      ? summaries
-      : summaries.filter((s) => s.category === filter);
-
-  const pieData = [
-    { name: "Level 1", value: stats.level1, color: "oklch(0.62 0.16 162)" },
-    { name: "Level 2", value: stats.level2, color: "oklch(0.82 0.17 84)" },
-    { name: "Level 3", value: stats.level3, color: "oklch(0.58 0.22 27)" },
-  ].filter((d) => d.value > 0);
-
-  const cards = [
-    { title: "Total Students", value: stats.total, icon: Users, color: "oklch(0.58 0.21 256)" },
-    { title: "Level 1 (Toppers)", value: stats.level1, icon: Trophy, color: "oklch(0.62 0.16 162)" },
-    { title: "Level 2 (Average)", value: stats.level2, icon: ClipboardCheck, color: "oklch(0.82 0.17 84)" },
-    { title: "Level 3 (Low)", value: stats.level3, icon: TrendingDown, color: "oklch(0.58 0.22 27)" },
-  ];
-
-  const filters: Filter[] = ["All", "Level 1", "Level 2", "Level 3"];
-
+function LandingPage() {
   return (
-    <div>
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <Button onClick={() => toast.info("Report export is handled by the backend in production.")}>
-          <Download className="mr-2 h-4 w-4" />
-          Download Report
-        </Button>
-      </div>
+    <div className="flex min-h-screen flex-col bg-background font-sans text-foreground">
+      {/* Header / Navbar for public site */}
+      <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b bg-background/80 px-6 backdrop-blur-md">
+        <div className="flex items-center gap-2 font-bold text-xl text-primary">
+          <GraduationCap className="h-6 w-6" />
+          <span>EduTrack</span>
+        </div>
+        <nav className="flex items-center gap-4 text-sm font-medium">
+          <a href="#about" className="hover:text-primary transition-colors">About</a>
+          <a href="#services" className="hover:text-primary transition-colors">Services</a>
+          <div className="ml-4 flex items-center gap-2">
+            <Link to="/login">
+              <Button variant="ghost">Log in</Button>
+            </Link>
+            <Link to="/signup">
+              <Button>Sign Up</Button>
+            </Link>
+          </div>
+        </nav>
+      </header>
 
-      <div className="mb-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map((c) => {
-          const Icon = c.icon;
-          return (
-            <Card key={c.title} className="border-t-4" style={{ borderTopColor: c.color }}>
-              <CardContent className="flex items-center justify-between p-5">
-                <div>
-                  <p className="mb-1 text-sm font-semibold text-muted-foreground">
-                    {c.title}
-                  </p>
-                  <p className="text-4xl font-bold">{c.value}</p>
-                </div>
-                <div
-                  className="flex h-12 w-12 items-center justify-center rounded-full"
-                  style={{ backgroundColor: `color-mix(in oklab, ${c.color} 15%, transparent)` }}
-                >
-                  <Icon className="h-6 w-6" style={{ color: c.color }} />
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardContent className="p-0">
-            <div className="flex flex-wrap items-center justify-between gap-3 p-5">
-              <h2 className="text-lg font-semibold">Student Performance</h2>
-              <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1">
-                {filters.map((f) => (
-                  <button
-                    key={f}
-                    type="button"
-                    onClick={() => setFilter(f)}
-                    className={
-                      "rounded-md px-3 py-1 text-sm font-semibold transition-colors " +
-                      (filter === f
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground")
-                    }
-                  >
-                    {f}
-                  </button>
-                ))}
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-24 sm:py-32 lg:pb-40">
+          <div className="mx-auto max-w-7xl px-6 lg:px-8">
+            <div className="mx-auto max-w-2xl text-center">
+              <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl text-slate-900">
+                Manage your institution with <span className="text-primary bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">EduTrack</span>
+              </h1>
+              <p className="mt-6 text-lg leading-8 text-muted-foreground">
+                The modern, premium platform for tracking student progress, managing assessments, and analyzing performance with role-based access control.
+              </p>
+              <div className="mt-10 flex items-center justify-center gap-x-6">
+                <Link to="/signup">
+                  <Button size="lg" className="rounded-full shadow-lg hover:shadow-xl transition-all">
+                    Get started for free
+                  </Button>
+                </Link>
+                <Link to="/login" className="text-sm font-semibold leading-6 hover:text-primary transition-colors">
+                  Log in to your account <span aria-hidden="true">→</span>
+                </Link>
               </div>
             </div>
+          </div>
+        </section>
 
-            {filtered.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-y bg-muted/50 text-left text-muted-foreground">
-                      <th className="px-5 py-3 font-semibold">Student</th>
-                      <th className="px-5 py-3 font-semibold">Department</th>
-                      <th className="px-5 py-3 font-semibold">Reg No</th>
-                      <th className="px-5 py-3 font-semibold">Total Marks</th>
-                      <th className="px-5 py-3 text-center font-semibold">Category</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((s) => (
-                      <tr key={s.id} className="border-b transition-colors hover:bg-muted/40">
-                        <td className="px-5 py-3">
-                          <Link
-                            to="/students/$id"
-                            params={{ id: s.id }}
-                            className="flex items-center gap-3"
-                          >
-                            <Avatar className="h-9 w-9">
-                              <AvatarFallback className="bg-accent text-primary">
-                                {s.name.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-semibold">{s.name}</p>
-                              <p className="text-xs text-muted-foreground">{s.email}</p>
-                            </div>
-                          </Link>
-                        </td>
-                        <td className="px-5 py-3">
-                          <Badge variant="secondary">{s.department || "N/A"}</Badge>
-                        </td>
-                        <td className="px-5 py-3 font-mono text-xs">{s.regNo}</td>
-                        <td className="px-5 py-3">
-                          <p className="font-semibold">{s.totalMarks}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Avg: {s.averageMarks.toFixed(1)}%
-                          </p>
-                        </td>
-                        <td className="px-5 py-3 text-center">
-                          <CategoryBadge category={s.category} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <EmptyState message="No students match the current category." />
-            )}
-          </CardContent>
-        </Card>
+        {/* About Section */}
+        <section id="about" className="py-24 sm:py-32 bg-white">
+          <div className="mx-auto max-w-7xl px-6 lg:px-8">
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">About Us</h2>
+              <p className="mt-6 text-lg leading-8 text-muted-foreground">
+                EduTrack was built to bridge the gap between administrative overhead and student success. 
+                We provide a sleek, intuitive interface for educators to effortlessly monitor academics.
+              </p>
+            </div>
+          </div>
+        </section>
 
-        <Card>
-          <CardContent className="p-5">
-            <h2 className="mb-2 text-lg font-semibold">Category Distribution</h2>
-            {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={3}
-                  >
-                    {pieData.map((d) => (
-                      <Cell key={d.name} fill={d.color} />
-                    ))}
-                  </Pie>
-                  <RTooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <EmptyState message="No data to chart yet." />
-            )}
-          </CardContent>
-        </Card>
-      </div>
+        {/* Services Section */}
+        <section id="services" className="py-24 sm:py-32 bg-slate-50">
+          <div className="mx-auto max-w-7xl px-6 lg:px-8">
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Our Services</h2>
+              <p className="mt-6 text-lg leading-8 text-muted-foreground">
+                Everything you need to run your educational institution efficiently.
+              </p>
+            </div>
+            <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:max-w-none">
+              <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
+                
+                <div className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-sm ring-1 ring-slate-200">
+                  <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <BookOpen className="h-8 w-8" />
+                  </div>
+                  <dt className="text-xl font-semibold leading-7">Student Management</dt>
+                  <dd className="mt-4 flex flex-auto flex-col text-base leading-7 text-muted-foreground">
+                    <p className="flex-auto">Maintain detailed records of your students, their academics, and external profiles in one place.</p>
+                  </dd>
+                </div>
+
+                <div className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-sm ring-1 ring-slate-200">
+                  <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <TrendingUp className="h-8 w-8" />
+                  </div>
+                  <dt className="text-xl font-semibold leading-7">Assessment Tracking</dt>
+                  <dd className="mt-4 flex flex-auto flex-col text-base leading-7 text-muted-foreground">
+                    <p className="flex-auto">Create assessments and bulk upload marks. Instantly visualize class performance via the dashboard.</p>
+                  </dd>
+                </div>
+
+                <div className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-sm ring-1 ring-slate-200">
+                  <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <ShieldCheck className="h-8 w-8" />
+                  </div>
+                  <dt className="text-xl font-semibold leading-7">Secure Access Control</dt>
+                  <dd className="mt-4 flex flex-auto flex-col text-base leading-7 text-muted-foreground">
+                    <p className="flex-auto">Role-based access ensures only administrators can modify records, while users can view data securely.</p>
+                  </dd>
+                </div>
+
+              </dl>
+            </div>
+          </div>
+        </section>
+      </main>
+      
+      <footer className="bg-white border-t py-12 text-center text-sm text-muted-foreground">
+        <p>&copy; 2026 EduTrack Inc. All rights reserved.</p>
+      </footer>
     </div>
   );
 }

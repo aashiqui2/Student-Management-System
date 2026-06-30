@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { API_BASE } from "@/lib/api";
 import {
   Select,
   SelectContent,
@@ -43,8 +45,9 @@ function Field({
 
 export function StudentForm({ id }: { id?: string }) {
   const navigate = useNavigate();
-  const { getStudent, addStudent, updateStudent } = useSMS();
+  const { getStudent, addStudent, updateStudent, removeStudentPhoto } = useSMS();
   const [profilePic, setProfilePic] = useState<File | undefined>(undefined);
+  const [removeProfilePic, setRemoveProfilePic] = useState(false);
   const isEdit = Boolean(id);
   const existing = id ? getStudent(id) : undefined;
 
@@ -63,6 +66,9 @@ export function StudentForm({ id }: { id?: string }) {
   const onSubmit = async (data: FormValues) => {
     try {
       if (isEdit && id) {
+        if (removeProfilePic) {
+          await removeStudentPhoto(id);
+        }
         await updateStudent(id, data, profilePic);
         toast.success("Student updated");
       } else {
@@ -183,25 +189,52 @@ export function StudentForm({ id }: { id?: string }) {
                   <Input {...register("instagramUrl")} />
                 </Field>
               </div>
-            </section>
-
-            <section>
+            </section>            <section>
               <h2 className="mb-1 text-lg font-bold text-primary">Profile Photo</h2>
               <Separator className="mb-5" />
-              <div className="space-y-3">
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    setProfilePic(file ?? undefined);
-                  }}
-                />
-                {profilePic && (
-                  <p className="text-sm text-muted-foreground">Selected: {profilePic.name}</p>
-                )}
+              <div className="flex items-center gap-6">
+                <Avatar className="h-20 w-20">
+                  {!removeProfilePic && profilePic ? (
+                    <AvatarImage src={URL.createObjectURL(profilePic)} alt="Preview" />
+                  ) : !removeProfilePic && existing?.profilePicUrl ? (
+                    <AvatarImage src={`${API_BASE}/api/students/${existing.id}/photo`} alt="Current" />
+                  ) : null}
+                  <AvatarFallback className="bg-accent text-2xl text-primary">
+                    {watch("name")?.charAt(0) || "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="space-y-3 flex-1">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      setProfilePic(file ?? undefined);
+                      if (file) setRemoveProfilePic(false);
+                    }}
+                  />
+                  <div className="flex items-center gap-4">
+                    {profilePic && (
+                      <p className="text-sm text-muted-foreground">Selected: {profilePic.name}</p>
+                    )}
+                    {existing?.profilePicUrl && !removeProfilePic && !profilePic && (
+                      <Button type="button" variant="destructive" size="sm" onClick={() => setRemoveProfilePic(true)}>
+                        Remove Photo
+                      </Button>
+                    )}
+                    {(removeProfilePic || profilePic) && (
+                      <Button type="button" variant="outline" size="sm" onClick={() => {
+                        setRemoveProfilePic(false);
+                        setProfilePic(undefined);
+                      }}>
+                        Undo
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
             </section>
+
 
             <div className="flex justify-end gap-3">
               <Button

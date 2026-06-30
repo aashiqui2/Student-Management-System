@@ -128,10 +128,15 @@ interface SMSContextValue {
   addStudent: (s: Omit<Student, "id">, file?: File) => Promise<Student>;
   addStudentsBulk: (rows: Omit<Student, "id">[]) => Promise<{ added: number; updated: number }>;
   updateStudent: (id: string, s: Omit<Student, "id">, file?: File) => Promise<Student>;
+  removeStudentPhoto: (id: string) => Promise<void>;
   deleteStudent: (id: string) => Promise<void>;
+  deleteStudentsBulk: (ids: number[]) => Promise<void>;
+  deleteAllStudents: () => Promise<void>;
   addAssessment: (a: Omit<Assessment, "id">, files?: File[]) => Promise<Assessment>;
   updateAssessment: (id: string, a: Omit<Assessment, "id">, files?: File[]) => Promise<Assessment>;
   deleteAssessment: (id: string) => Promise<void>;
+  deleteAssessmentsBulk: (ids: number[]) => Promise<void>;
+  deleteAllAssessments: () => Promise<void>;
   setMark: (studentId: string, assessmentId: string, marks: number | null) => Promise<void>;
   setMarksByRegNo: (
     assessmentId: string,
@@ -177,7 +182,7 @@ export function SMSProvider({ children }: { children: ReactNode }) {
       let attempts = 0;
       for (const a of assessments) {
         const key = `${student.id}:${a.id}`;
-        if (key in marks) {
+        if (marks[key] !== undefined) {
           const scored = marks[key];
           total += scored;
           pctSum += a.totalMarks > 0 ? (scored / a.totalMarks) * 100 : 0;
@@ -207,7 +212,7 @@ export function SMSProvider({ children }: { children: ReactNode }) {
     isError,
     addStudent: async (s, file) => {
       const created = await api.createStudent(toStudentCreatePayload(s), file);
-      await queryClient.invalidateQueries(["students"]);
+      await queryClient.invalidateQueries({ queryKey: [] });
       return toStudent(created);
     },
     addStudentsBulk: async (rows) => {
@@ -221,17 +226,29 @@ export function SMSProvider({ children }: { children: ReactNode }) {
           updated += 1;
         }
       }
-      await queryClient.invalidateQueries(["students"]);
+      await queryClient.invalidateQueries({ queryKey: [] });
       return { added, updated };
     },
     updateStudent: async (id, s, file) => {
       const updated = await api.updateStudent(id, toStudentCreatePayload(s), file);
-      await queryClient.invalidateQueries(["students"]);
+      await queryClient.invalidateQueries({ queryKey: [] });
       return toStudent(updated);
+    },
+    removeStudentPhoto: async (id) => {
+      await api.deleteStudentPhoto(id);
+      await queryClient.invalidateQueries({ queryKey: [] });
     },
     deleteStudent: async (id) => {
       await api.deleteStudent(id);
-      await queryClient.invalidateQueries(["students", "marks"]);
+      await queryClient.invalidateQueries({ queryKey: [] });
+    },
+    deleteStudentsBulk: async (ids) => {
+      await api.deleteStudentsBulk(ids);
+      await queryClient.invalidateQueries({ queryKey: [] });
+    },
+    deleteAllStudents: async () => {
+      await api.deleteAllStudents();
+      await queryClient.invalidateQueries({ queryKey: [] });
     },
     addAssessment: async (a, files) => {
       const created = await api.createAssessment(
@@ -242,7 +259,7 @@ export function SMSProvider({ children }: { children: ReactNode }) {
         },
         files,
       );
-      await queryClient.invalidateQueries(["assessments"]);
+      await queryClient.invalidateQueries({ queryKey: [] });
       return toAssessment(created);
     },
     updateAssessment: async (id, a, files) => {
@@ -255,12 +272,20 @@ export function SMSProvider({ children }: { children: ReactNode }) {
         },
         files,
       );
-      await queryClient.invalidateQueries(["assessments", "marks"]);
+      await queryClient.invalidateQueries({ queryKey: [] });
       return toAssessment(updated);
     },
     deleteAssessment: async (id) => {
       await api.deleteAssessment(id);
-      await queryClient.invalidateQueries(["assessments", "marks"]);
+      await queryClient.invalidateQueries({ queryKey: [] });
+    },
+    deleteAssessmentsBulk: async (ids) => {
+      await api.deleteAssessmentsBulk(ids);
+      await queryClient.invalidateQueries({ queryKey: [] });
+    },
+    deleteAllAssessments: async () => {
+      await api.deleteAllAssessments();
+      await queryClient.invalidateQueries({ queryKey: [] });
     },
     setMark: async (studentId, assessmentId, m) => {
       if (m === null || Number.isNaN(m)) {
@@ -268,7 +293,7 @@ export function SMSProvider({ children }: { children: ReactNode }) {
       } else {
         await api.assignMark(studentId, assessmentId, m);
       }
-      await queryClient.invalidateQueries(["marks"]);
+      await queryClient.invalidateQueries({ queryKey: [] });
     },
     setMarksByRegNo: async (assessmentId, rows) => {
       const unmatched: string[] = [];
@@ -284,7 +309,7 @@ export function SMSProvider({ children }: { children: ReactNode }) {
         await api.assignMark(student.id, assessmentId, row.marks);
         matched += 1;
       }
-      await queryClient.invalidateQueries(["marks"]);
+      await queryClient.invalidateQueries({ queryKey: [] });
       return { matched, unmatched };
     },
   };

@@ -21,7 +21,8 @@ import { useSMS } from "@/lib/sms-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { API_BASE } from "@/lib/api";
 import { CategoryBadge } from "@/components/sms/CategoryBadge";
 import { EmptyState } from "@/components/sms/EmptyState";
 
@@ -85,6 +86,9 @@ function StudentProfile() {
         <Card className="lg:col-span-1">
           <CardContent className="flex flex-col items-center p-6 text-center">
             <Avatar className="h-24 w-24">
+              {student.profilePicUrl && (
+                <AvatarImage src={`${API_BASE}/api/students/${student.id}/photo`} alt={student.name} />
+              )}
               <AvatarFallback className="bg-accent text-2xl text-primary">
                 {student.name.charAt(0)}
               </AvatarFallback>

@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Users,
@@ -8,10 +8,12 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 
 const items = [
-  { text: "Dashboard", icon: LayoutDashboard, path: "/" as const },
+  { text: "Dashboard", icon: LayoutDashboard, path: "/dashboard" as const },
   { text: "Students", icon: Users, path: "/students" as const },
   { text: "Assessments", icon: ClipboardList, path: "/assessments" as const },
   { text: "Marks Entry", icon: PencilRuler, path: "/marks" as const },
@@ -25,6 +27,13 @@ export function Sidebar({
   setCollapsed: (v: boolean) => void;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { logout, user } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    logout();
+    router.navigate({ to: "/login" });
+  };
 
   return (
     <aside
@@ -91,6 +100,20 @@ export function Sidebar({
             );
           })}
         </nav>
+        
+        <div className="mt-auto p-4">
+          <button
+            onClick={handleLogout}
+            title={collapsed ? "Log out" : undefined}
+            className={cn(
+              "flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+              collapsed ? "justify-center" : "gap-3"
+            )}
+          >
+            <LogOut className="h-5 w-5 shrink-0" />
+            {!collapsed && <span>Log out</span>}
+          </button>
+        </div>
       </div>
     </aside>
   );
