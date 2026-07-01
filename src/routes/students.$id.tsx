@@ -15,9 +15,11 @@ import {
   Building2,
   Github,
   Linkedin,
+  Code2,
   Pencil,
 } from "lucide-react";
 import { useSMS } from "@/lib/sms-data";
+import { useAuth } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +39,7 @@ function StudentProfile() {
   const { id } = useParams({ from: "/students/$id" });
   const navigate = useNavigate();
   const { getSummary, assessments, marks } = useSMS();
+  const { isAdmin, isStudent, user } = useAuth();
   const student = getSummary(id);
 
   if (!student) {
@@ -74,12 +77,14 @@ function StudentProfile() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-3xl font-bold tracking-tight">Student Profile</h1>
-        <Link to="/students/edit/$id" params={{ id }} className="ml-auto">
-          <Button variant="outline">
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
-        </Link>
+        {(isAdmin || isStudent) && (
+          <Link to="/students/edit/$id" params={{ id }} className="ml-auto">
+            <Button variant="outline">
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -123,8 +128,14 @@ function StudentProfile() {
               )}
               <div className="flex items-center gap-3 text-muted-foreground">
                 <Building2 className="h-4 w-4" />{" "}
-                <span>{student.department || "N/A"}</span>
+                <span>{student.department && student.section ? `${student.department} ${student.section}` : student.department || "N/A"}</span>
               </div>
+              {student.pursuingYear && (
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <span className="text-xs font-medium">Year:</span>
+                  <span>{student.pursuingYear.replace("_", " ").toLowerCase()}</span>
+                </div>
+              )}
               {student.githubUrl && (
                 <a
                   href={student.githubUrl}
@@ -143,6 +154,16 @@ function StudentProfile() {
                   className="flex items-center gap-3 text-primary hover:underline"
                 >
                   <Linkedin className="h-4 w-4" /> <span>LinkedIn</span>
+                </a>
+              )}
+              {student.leetcodeUrl && (
+                <a
+                  href={student.leetcodeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-3 text-primary hover:underline"
+                >
+                  <Code2 className="h-4 w-4" /> <span>LeetCode</span>
                 </a>
               )}
             </div>

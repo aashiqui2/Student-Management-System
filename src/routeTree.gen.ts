@@ -10,14 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MarksRouteImport } from './routes/marks'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as UsersIndexRouteImport } from './routes/users.index'
 import { Route as StudentsIndexRouteImport } from './routes/students.index'
+import { Route as StaffIndexRouteImport } from './routes/staff.index'
 import { Route as AssessmentsIndexRouteImport } from './routes/assessments.index'
 import { Route as StudentsNewRouteImport } from './routes/students.new'
 import { Route as StudentsIdRouteImport } from './routes/students.$id'
+import { Route as StaffProfileRouteImport } from './routes/staff.profile'
 import { Route as AssessmentsNewRouteImport } from './routes/assessments.new'
 import { Route as StudentsEditIdRouteImport } from './routes/students.edit.$id'
 import { Route as AssessmentsEditIdRouteImport } from './routes/assessments.edit.$id'
@@ -25,6 +29,11 @@ import { Route as AssessmentsEditIdRouteImport } from './routes/assessments.edit
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MarksRoute = MarksRouteImport.update({
@@ -47,9 +56,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UsersIndexRoute = UsersIndexRouteImport.update({
+  id: '/users/',
+  path: '/users/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudentsIndexRoute = StudentsIndexRouteImport.update({
   id: '/students/',
   path: '/students/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StaffIndexRoute = StaffIndexRouteImport.update({
+  id: '/staff/',
+  path: '/staff/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssessmentsIndexRoute = AssessmentsIndexRouteImport.update({
@@ -65,6 +84,11 @@ const StudentsNewRoute = StudentsNewRouteImport.update({
 const StudentsIdRoute = StudentsIdRouteImport.update({
   id: '/students/$id',
   path: '/students/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StaffProfileRoute = StaffProfileRouteImport.update({
+  id: '/staff/profile',
+  path: '/staff/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssessmentsNewRoute = AssessmentsNewRouteImport.update({
@@ -88,12 +112,16 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/marks': typeof MarksRoute
+  '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
   '/assessments/new': typeof AssessmentsNewRoute
+  '/staff/profile': typeof StaffProfileRoute
   '/students/$id': typeof StudentsIdRoute
   '/students/new': typeof StudentsNewRoute
   '/assessments/': typeof AssessmentsIndexRoute
+  '/staff/': typeof StaffIndexRoute
   '/students/': typeof StudentsIndexRoute
+  '/users/': typeof UsersIndexRoute
   '/assessments/edit/$id': typeof AssessmentsEditIdRoute
   '/students/edit/$id': typeof StudentsEditIdRoute
 }
@@ -102,12 +130,16 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/marks': typeof MarksRoute
+  '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
   '/assessments/new': typeof AssessmentsNewRoute
+  '/staff/profile': typeof StaffProfileRoute
   '/students/$id': typeof StudentsIdRoute
   '/students/new': typeof StudentsNewRoute
   '/assessments': typeof AssessmentsIndexRoute
+  '/staff': typeof StaffIndexRoute
   '/students': typeof StudentsIndexRoute
+  '/users': typeof UsersIndexRoute
   '/assessments/edit/$id': typeof AssessmentsEditIdRoute
   '/students/edit/$id': typeof StudentsEditIdRoute
 }
@@ -117,12 +149,16 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/marks': typeof MarksRoute
+  '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
   '/assessments/new': typeof AssessmentsNewRoute
+  '/staff/profile': typeof StaffProfileRoute
   '/students/$id': typeof StudentsIdRoute
   '/students/new': typeof StudentsNewRoute
   '/assessments/': typeof AssessmentsIndexRoute
+  '/staff/': typeof StaffIndexRoute
   '/students/': typeof StudentsIndexRoute
+  '/users/': typeof UsersIndexRoute
   '/assessments/edit/$id': typeof AssessmentsEditIdRoute
   '/students/edit/$id': typeof StudentsEditIdRoute
 }
@@ -133,12 +169,16 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/marks'
+    | '/profile'
     | '/signup'
     | '/assessments/new'
+    | '/staff/profile'
     | '/students/$id'
     | '/students/new'
     | '/assessments/'
+    | '/staff/'
     | '/students/'
+    | '/users/'
     | '/assessments/edit/$id'
     | '/students/edit/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -147,12 +187,16 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/marks'
+    | '/profile'
     | '/signup'
     | '/assessments/new'
+    | '/staff/profile'
     | '/students/$id'
     | '/students/new'
     | '/assessments'
+    | '/staff'
     | '/students'
+    | '/users'
     | '/assessments/edit/$id'
     | '/students/edit/$id'
   id:
@@ -161,12 +205,16 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/marks'
+    | '/profile'
     | '/signup'
     | '/assessments/new'
+    | '/staff/profile'
     | '/students/$id'
     | '/students/new'
     | '/assessments/'
+    | '/staff/'
     | '/students/'
+    | '/users/'
     | '/assessments/edit/$id'
     | '/students/edit/$id'
   fileRoutesById: FileRoutesById
@@ -176,12 +224,16 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   MarksRoute: typeof MarksRoute
+  ProfileRoute: typeof ProfileRoute
   SignupRoute: typeof SignupRoute
   AssessmentsNewRoute: typeof AssessmentsNewRoute
+  StaffProfileRoute: typeof StaffProfileRoute
   StudentsIdRoute: typeof StudentsIdRoute
   StudentsNewRoute: typeof StudentsNewRoute
   AssessmentsIndexRoute: typeof AssessmentsIndexRoute
+  StaffIndexRoute: typeof StaffIndexRoute
   StudentsIndexRoute: typeof StudentsIndexRoute
+  UsersIndexRoute: typeof UsersIndexRoute
   AssessmentsEditIdRoute: typeof AssessmentsEditIdRoute
   StudentsEditIdRoute: typeof StudentsEditIdRoute
 }
@@ -193,6 +245,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/marks': {
@@ -223,11 +282,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/users/': {
+      id: '/users/'
+      path: '/users'
+      fullPath: '/users/'
+      preLoaderRoute: typeof UsersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/students/': {
       id: '/students/'
       path: '/students'
       fullPath: '/students/'
       preLoaderRoute: typeof StudentsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/staff/': {
+      id: '/staff/'
+      path: '/staff'
+      fullPath: '/staff/'
+      preLoaderRoute: typeof StaffIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assessments/': {
@@ -249,6 +322,13 @@ declare module '@tanstack/react-router' {
       path: '/students/$id'
       fullPath: '/students/$id'
       preLoaderRoute: typeof StudentsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/staff/profile': {
+      id: '/staff/profile'
+      path: '/staff/profile'
+      fullPath: '/staff/profile'
+      preLoaderRoute: typeof StaffProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assessments/new': {
@@ -280,12 +360,16 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   MarksRoute: MarksRoute,
+  ProfileRoute: ProfileRoute,
   SignupRoute: SignupRoute,
   AssessmentsNewRoute: AssessmentsNewRoute,
+  StaffProfileRoute: StaffProfileRoute,
   StudentsIdRoute: StudentsIdRoute,
   StudentsNewRoute: StudentsNewRoute,
   AssessmentsIndexRoute: AssessmentsIndexRoute,
+  StaffIndexRoute: StaffIndexRoute,
   StudentsIndexRoute: StudentsIndexRoute,
+  UsersIndexRoute: UsersIndexRoute,
   AssessmentsEditIdRoute: AssessmentsEditIdRoute,
   StudentsEditIdRoute: StudentsEditIdRoute,
 }

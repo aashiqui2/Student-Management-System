@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMemo, useState, useEffect } from "react";
 import {
   PieChart,
   Pie,
@@ -16,6 +16,7 @@ import {
   Download,
 } from "lucide-react";
 import { useSMS, type Category } from "@/lib/sms-data";
+import { useAuth } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,7 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { getReportDownloadUrl, API_BASE } from "@/lib/api";
+import { downloadReport, API_BASE } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -53,7 +54,16 @@ type Filter = "All" | Category;
 
 function Dashboard() {
   const { summaries } = useSMS();
+  const { isStudent } = useAuth();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>("All");
+
+  // Students see their own profile, not the admin dashboard
+  useEffect(() => {
+    if (isStudent) {
+      navigate({ to: "/profile" });
+    }
+  }, [isStudent, navigate]);
 
   const stats = useMemo(() => {
     return {
@@ -97,12 +107,16 @@ function Dashboard() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              onClick={() => window.open(getReportDownloadUrl("excel", filter), "_blank")}
+              onClick={() => void downloadReport("excel", filter).catch((error) => {
+                toast.error(error instanceof Error ? error.message : "Report download failed");
+              })}
             >
               Export as Excel (.xlsx)
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => window.open(getReportDownloadUrl("pdf", filter), "_blank")}
+              onClick={() => void downloadReport("pdf", filter).catch((error) => {
+                toast.error(error instanceof Error ? error.message : "Report download failed");
+              })}
             >
               Export as PDF (.pdf)
             </DropdownMenuItem>
@@ -135,9 +149,9 @@ function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardContent className="p-0">
-            <div className="flex flex-wrap items-center justify-between gap-3 p-5">
+        <Card className="lg:col-span-2 flex flex-col">
+          <CardContent className="p-0 flex flex-col flex-1">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-5 flex-shrink-0">
               <h2 className="text-lg font-semibold">Student Performance</h2>
               <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1">
                 {filters.map((f) => (
@@ -159,7 +173,7 @@ function Dashboard() {
             </div>
 
             {filtered.length > 0 ? (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-auto flex-1 max-h-[500px]">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-y bg-muted/50 text-left text-muted-foreground">
@@ -194,7 +208,7 @@ function Dashboard() {
                           </Link>
                         </td>
                         <td className="px-5 py-3">
-                          <Badge variant="secondary">{s.department || "N/A"}</Badge>
+                          <Badge variant="secondary">{s.department && s.section ? `${s.department} ${s.section}` : s.department || "N/A"}</Badge>
                         </td>
                         <td className="px-5 py-3 font-mono text-xs">{s.regNo}</td>
                         <td className="px-5 py-3">

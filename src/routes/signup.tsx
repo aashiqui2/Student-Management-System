@@ -32,9 +32,8 @@ function Signup() {
         throw new Error(text || "Registration failed");
       }
       const data = await res.json();
-      login({ username: data.username, token: data.token, role: data.role });
-      toast.success("Account created successfully!");
-      navigate({ to: "/dashboard" });
+      toast.success("Account created successfully! Please log in.");
+      navigate({ to: "/login" });
     } catch (err: any) {
       toast.error(err.message);
     } finally {

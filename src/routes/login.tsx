@@ -31,7 +31,11 @@ function Login() {
       const data = await res.json();
       login({ username: data.username, token: data.token, role: data.role });
       toast.success("Welcome back!");
-      navigate({ to: "/dashboard" });
+      if (data.role === "STUDENT") {
+        navigate({ to: "/profile" });
+      } else {
+        navigate({ to: "/dashboard" });
+      }
     } catch (err: any) {
       toast.error(err.message);
     } finally {

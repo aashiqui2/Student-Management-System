@@ -1,13 +1,18 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import {
   PURSUING_YEARS,
   useSMS,
   type Student,
 } from "@/lib/sms-data";
+import { useAuth } from "@/lib/auth";
+
+const DEPARTMENTS = ["ECE", "EEE", "MECH", "CIVIL", "CSBS", "IT", "AIDS", "CS", "CSE"];
+const SECTIONS = ["A", "B", "C", "D"];
+const YEAR_OPTIONS = Array.from({ length: 2030 - 2018 + 1 }, (_, index) => String(2018 + index));
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,24 +51,56 @@ function Field({
 export function StudentForm({ id }: { id?: string }) {
   const navigate = useNavigate();
   const { getStudent, addStudent, updateStudent, removeStudentPhoto } = useSMS();
+  const { isStudent, isAdmin } = useAuth();
   const [profilePic, setProfilePic] = useState<File | undefined>(undefined);
   const [removeProfilePic, setRemoveProfilePic] = useState(false);
   const isEdit = Boolean(id);
   const existing = id ? getStudent(id) : undefined;
+  // Students can only edit their own social links & mobile
+  const isReadOnly = isStudent && isEdit;
 
   const {
     register,
     handleSubmit,
     setValue,
     watch,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<FormValues>({
     defaultValues: existing ?? { pursuingYear: "" },
   });
 
   const pursuingYear = watch("pursuingYear");
+  const department = watch("department");
+  const section = watch("section");
+  const startYear = watch("startYear");
+  const endYear = watch("endYear");
 
   const onSubmit = async (data: FormValues) => {
+    const start = Number(data.startYear);
+    const end = Number(data.endYear);
+
+    if (data.startYear && data.endYear) {
+      if (start === end) {
+        setError("endYear", {
+          type: "validate",
+          message: "End year cannot be the same as start year",
+        });
+        return;
+      }
+
+      if (end - start < 3 || end - start > 4) {
+        setError("endYear", {
+          type: "validate",
+          message: "Graduation year must be 3 to 4 years after the start year",
+        });
+        return;
+      }
+    }
+
+    clearErrors("endYear");
+
     try {
       if (isEdit && id) {
         if (removeProfilePic) {
@@ -108,11 +145,12 @@ export function StudentForm({ id }: { id?: string }) {
               <Separator className="mb-5" />
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <Field label="Full Name" error={errors.name?.message}>
-                  <Input {...register("name", { required: "Name is required" })} />
+                  <Input {...register("name", { required: "Name is required" })} disabled={isReadOnly} />
                 </Field>
                 <Field label="Registration Number" error={errors.regNo?.message}>
                   <Input
                     {...register("regNo", { required: "Registration number is required" })}
+                    disabled={isReadOnly}
                   />
                 </Field>
                 <Field label="Email Address" error={errors.email?.message}>
@@ -122,6 +160,7 @@ export function StudentForm({ id }: { id?: string }) {
                       required: "Email is required",
                       pattern: { value: /^\S+@\S+$/i, message: "Invalid email address" },
                     })}
+                    disabled={isReadOnly}
                   />
                 </Field>
                 <Field label="Mobile Number (Optional)" error={errors.mobileNumber?.message}>
@@ -141,15 +180,55 @@ export function StudentForm({ id }: { id?: string }) {
               <h2 className="mb-1 text-lg font-bold text-primary">Academic Details</h2>
               <Separator className="mb-5" />
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <Field label="Department (e.g., CSE, IT, ECE)">
-                  <Input {...register("department")} />
+                <Field label="Department" error={errors.department?.message}>
+                  <Select
+                    value={department || ""}
+                    onValueChange={(v) =>
+                      setValue("department", v as FormValues["department"])
+                    }
+                    disabled={isReadOnly}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DEPARTMENTS.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.department?.message && <p className="text-xs text-destructive">{errors.department.message}</p>}
                 </Field>
-                <Field label="Pursuing Year">
+                <Field label="Section" error={errors.section?.message}>
+                  <Select
+                    value={section || ""}
+                    onValueChange={(v) =>
+                      setValue("section", v as FormValues["section"])
+                    }
+                    disabled={isReadOnly}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select section" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SECTIONS.map((sec) => (
+                        <SelectItem key={sec} value={sec}>
+                          {sec}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.section?.message && <p className="text-xs text-destructive">{errors.section.message}</p>}
+                </Field>
+                <Field label="Pursuing Year" error={errors.pursuingYear?.message}>
                   <Select
                     value={pursuingYear || ""}
                     onValueChange={(v) =>
                       setValue("pursuingYear", v as FormValues["pursuingYear"])
                     }
+                    disabled={isReadOnly}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select year" />
@@ -162,12 +241,43 @@ export function StudentForm({ id }: { id?: string }) {
                       ))}
                     </SelectContent>
                   </Select>
+                  {errors.pursuingYear?.message && <p className="text-xs text-destructive">{errors.pursuingYear.message}</p>}
                 </Field>
-                <Field label="Start Year">
-                  <Input type="number" {...register("startYear")} />
+                <Field label="Start Year" error={errors.startYear?.message}>
+                  <Select
+                    value={startYear || ""}
+                    onValueChange={(v) => setValue("startYear", v)}
+                    disabled={isReadOnly}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select start year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {YEAR_OPTIONS.map((year) => (
+                        <SelectItem key={year} value={year}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </Field>
-                <Field label="End Year (Graduation)">
-                  <Input type="number" {...register("endYear")} />
+                <Field label="End Year (Graduation)" error={errors.endYear?.message}>
+                  <Select
+                    value={endYear || ""}
+                    onValueChange={(v) => setValue("endYear", v)}
+                    disabled={isReadOnly}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select end year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {YEAR_OPTIONS.map((year) => (
+                        <SelectItem key={year} value={year}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </Field>
               </div>
             </section>
@@ -185,8 +295,8 @@ export function StudentForm({ id }: { id?: string }) {
                 <Field label="GitHub URL">
                   <Input {...register("githubUrl")} />
                 </Field>
-                <Field label="Instagram URL">
-                  <Input {...register("instagramUrl")} />
+                <Field label="LeetCode URL">
+                  <Input {...register("leetcodeUrl")} />
                 </Field>
               </div>
             </section>            <section>
@@ -204,19 +314,34 @@ export function StudentForm({ id }: { id?: string }) {
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-3 flex-1">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      setProfilePic(file ?? undefined);
-                      if (file) setRemoveProfilePic(false);
-                    }}
-                  />
                   <div className="flex items-center gap-4">
-                    {profilePic && (
-                      <p className="text-sm text-muted-foreground">Selected: {profilePic.name}</p>
+                    <Label
+                      htmlFor="profile-upload"
+                      className="flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-4 py-2 hover:bg-accent hover:text-accent-foreground shadow-sm transition-colors"
+                    >
+                      <UploadCloud className="h-4 w-4" />
+                      <span className="text-sm font-medium">Upload Photo</span>
+                    </Label>
+                    <input
+                      id="profile-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        setProfilePic(file ?? undefined);
+                        if (file) setRemoveProfilePic(false);
+                      }}
+                    />
+                    {profilePic ? (
+                      <p className="text-sm text-muted-foreground truncate max-w-[200px]" title={profilePic.name}>
+                        {profilePic.name}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No file chosen</p>
                     )}
+                  </div>
+                  <div className="flex items-center gap-4">
                     {existing?.profilePicUrl && !removeProfilePic && !profilePic && (
                       <Button type="button" variant="destructive" size="sm" onClick={() => setRemoveProfilePic(true)}>
                         Remove Photo

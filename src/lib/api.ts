@@ -4,18 +4,28 @@ function buildUrl(path: string) {
   return `${API_BASE}${path}`;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = typeof window !== "undefined"
-    ? (() => {
-        const stored = localStorage.getItem("eduTrack_user");
-        return stored ? JSON.parse(stored).token : null;
-      })()
-    : null;
+function getAuthToken() {
+  if (typeof window === "undefined") {
+    return null;
+  }
 
+  const stored = localStorage.getItem("eduTrack_user");
+  return stored ? JSON.parse(stored).token : null;
+}
+
+function buildAuthHeaders(init?: RequestInit) {
   const headers = new Headers(init?.headers);
+  const token = getAuthToken();
+
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
+
+  return headers;
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = buildAuthHeaders(init);
 
   const res = await fetch(buildUrl(path), {
     credentials: "include",
@@ -42,13 +52,14 @@ export type StudentApi = {
   email: string;
   mobileNumber?: string;
   department?: string;
+  section?: string;
   pursuingYear?: string | null;
   hackerRankUsername?: string;
   startYear?: number | null;
   endYear?: number | null;
   linkedInUrl?: string;
   githubUrl?: string;
-  instagramUrl?: string;
+  leetcodeUrl?: string;
   profilePicUrl?: string;
 };
 
@@ -84,6 +95,52 @@ export type StudentCreatePayload = Omit<
 };
 
 export type AssessmentCreatePayload = Omit<AssessmentApi, "id" | "resources">;
+
+export type DesignationApi = {
+  id: number;
+  designationName: string;
+};
+
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
+};
+
+export type StaffProfileApi = {
+  id: number;
+  name: string;
+  email: string;
+  mobileNumber?: string;
+  linkedInUrl?: string;
+  department?: string;
+  specialization?: string;
+  profilePhotoUrl?: string;
+  designation?: DesignationApi;
+  user?: { id: number; username: string; role: string; enabled: boolean };
+  employeeId?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  pincode?: string;
+  qualification?: string;
+  experience?: number;
+  joiningDate?: string;
+  githubUrl?: string;
+  portfolioUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type StaffProfileUpdatePayload = Omit<
+  StaffProfileApi,
+  "id" | "profilePhotoUrl" | "user" | "createdAt" | "updatedAt"
+> & {
+  designation?: DesignationApi;
+};
+
 
 function buildStudentFormData(
   payload: StudentCreatePayload,
@@ -185,8 +242,73 @@ export const api = {
       body: form,
     });
   },
+
+  getCurrentStaffProfile: () => request<StaffProfileApi>("/api/staff/me"),
+  updateCurrentStaffProfile: (payload: StaffProfileUpdatePayload) =>
+    request<StaffProfileApi>("/api/staff/me", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  uploadStaffPhoto: (file: File) => {
+    const form = new FormData();
+    form.set("file", file);
+    return request<StaffProfileApi>("/api/staff/me/photo", {
+      method: "POST",
+      body: form,
+    });
+  },
+  deleteStaffPhoto: () =>
+    request<StaffProfileApi>("/api/staff/me/photo", {
+      method: "DELETE",
+    }),
+  changePassword: (payload: ChangePasswordPayload) =>
+    request<void>("/api/auth/change-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  getAllStaff: () => request<StaffProfileApi[]>("/api/staff"),
+  getStaffById: (id: string | number) =>
+    request<StaffProfileApi>(`/api/staff/${id}`),
+  updateStaff: (id: string | number, payload: StaffProfileUpdatePayload) =>
+    request<StaffProfileApi>(`/api/staff/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  deleteStaff: (id: string | number) =>
+    request<void>(`/api/staff/${id}`, { method: "DELETE" }),
+  getDesignations: () => request<DesignationApi[]>("/api/staff/designations"),
 };
 
 export function getReportDownloadUrl(format: "excel" | "pdf", filter: string) {
   return `${API_BASE}/api/dashboard/export?format=${format}&filter=${encodeURIComponent(filter)}`;
+}
+
+export async function downloadReport(format: "excel" | "pdf", filter: string) {
+  const url = getReportDownloadUrl(format, filter);
+  const headers = buildAuthHeaders();
+  const res = await fetch(url, {
+    credentials: "include",
+    headers,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Report download failed: ${res.status} ${res.statusText} ${text}`);
+  }
+
+  const blob = await res.blob();
+  const contentDisposition = res.headers.get("content-disposition") ?? "";
+  const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  const filename = filenameMatch?.[1] ?? `${format === "pdf" ? "dashboard_report" : "dashboard_report"}.${format === "pdf" ? "pdf" : "xlsx"}`;
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(downloadUrl);
 }

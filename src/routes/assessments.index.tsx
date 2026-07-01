@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/assessments/")({
   head: () => ({
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/assessments/")({
 
 function AssessmentList() {
   const { assessments, deleteAssessment, deleteAssessmentsBulk, deleteAllAssessments } = useSMS();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isStaff } = useAuth();
   const navigate = useNavigate();
   const [toDelete, setToDelete] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -46,15 +47,15 @@ function AssessmentList() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Assessments</h1>
         </div>
-        {isAdmin && (
+        {(isAdmin || isStaff) && (
           <div className="flex flex-wrap items-center gap-2">
-            {selectedIds.size > 0 && (
+            {isAdmin && selectedIds.size > 0 && (
               <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete Selected ({selectedIds.size})
               </Button>
             )}
-            {assessments.length > 0 && selectedIds.size === 0 && (
+            {isAdmin && assessments.length > 0 && selectedIds.size === 0 && (
               <Button variant="destructive" onClick={() => setShowDeleteAllConfirm(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete All
@@ -94,7 +95,7 @@ function AssessmentList() {
                     <th className="px-5 py-3 font-semibold">Date Conducted</th>
                     <th className="px-5 py-3 font-semibold">Total Marks</th>
                     <th className="px-5 py-3 font-semibold">Resources</th>
-                    {isAdmin && <th className="px-5 py-3 text-center font-semibold">Actions</th>}
+                    {(isAdmin || isStaff) && <th className="px-5 py-3 text-center font-semibold">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -143,7 +144,7 @@ function AssessmentList() {
                         )}
                       </td>
 
-                      {isAdmin && (
+                      {(isAdmin || isStaff) && (
                         <td className="px-5 py-3">
                           <div className="flex items-center justify-center gap-1">
                             <Button

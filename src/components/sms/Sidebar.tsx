@@ -2,22 +2,19 @@ import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Users,
-  ClipboardList,
+  User,
+  FileText,
+  FileSpreadsheet,
+  Settings,
   PencilRuler,
   GraduationCap,
   ChevronLeft,
   ChevronRight,
+  LogOut,
+  Briefcase,
 } from "lucide-react";
-import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
-
-const items = [
-  { text: "Dashboard", icon: LayoutDashboard, path: "/dashboard" as const },
-  { text: "Students", icon: Users, path: "/students" as const },
-  { text: "Assessments", icon: ClipboardList, path: "/assessments" as const },
-  { text: "Marks Entry", icon: PencilRuler, path: "/marks" as const },
-];
 
 export function Sidebar({
   collapsed,
@@ -27,8 +24,38 @@ export function Sidebar({
   setCollapsed: (v: boolean) => void;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { logout, user } = useAuth();
+  const { logout, user, isAdmin, isStaff, isStudent } = useAuth();
   const router = useRouter();
+
+  const getNavigation = () => {
+    if (isAdmin) {
+      return [
+        { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { name: "Students", href: "/students", icon: Users },
+        { name: "Assessments", href: "/assessments", icon: FileText },
+        { name: "Marks Entry", href: "/marks", icon: PencilRuler },
+        { name: "Staff Management", href: "/staff", icon: Briefcase },
+        { name: "User Management", href: "/users", icon: Settings },
+      ];
+    } else if (isStaff) {
+      return [
+        { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { name: "Students", href: "/students", icon: Users },
+        { name: "Assessments", href: "/assessments", icon: FileText },
+        { name: "Marks Entry", href: "/marks", icon: PencilRuler },
+        { name: "Staff Directory", href: "/staff", icon: Briefcase },
+        { name: "My Profile", href: "/staff/profile", icon: User },
+      ];
+    } else if (isStudent) {
+      return [
+        { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { name: "My Profile", href: "/profile", icon: User },
+      ];
+    }
+    return [];
+  };
+
+  const navigation = getNavigation();
 
   const handleLogout = () => {
     logout();
@@ -38,14 +65,15 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "relative shrink-0 border-r border-border bg-sidebar transition-all duration-300",
+        "relative shrink-0 border-r border-border bg-sidebar transition-all duration-300 flex flex-col h-screen sticky top-0",
         collapsed ? "w-[72px]" : "w-60",
       )}
     >
-      <div className="sticky top-0 flex h-full flex-col">
-        <div
+      <div className="flex h-full flex-col">
+        <Link
+          to="/"
           className={cn(
-            "flex h-[72px] items-center px-4",
+            "flex h-[72px] items-center px-4 hover:opacity-80 transition-opacity",
             collapsed ? "justify-center" : "gap-3",
           )}
         >
@@ -55,7 +83,7 @@ export function Sidebar({
           {!collapsed && (
             <span className="text-lg font-bold tracking-tight">EduTrack</span>
           )}
-        </div>
+        </Link>
 
         <button
           type="button"
@@ -72,17 +100,17 @@ export function Sidebar({
 
         <div className="border-t border-border" />
 
-        <nav className="flex flex-col gap-1 p-2 pt-4">
-          {items.map((item) => {
+        <nav className="flex flex-col gap-1 p-2 pt-4 overflow-y-auto flex-1">
+          {navigation.map((item) => {
             const isActive =
-              pathname === item.path ||
-              (item.path !== "/" && pathname.startsWith(item.path));
+              pathname === item.href ||
+              (item.href !== "/dashboard" && item.href !== "/" && pathname.startsWith(item.href));
             const Icon = item.icon;
             return (
               <Link
-                key={item.text}
-                to={item.path}
-                title={collapsed ? item.text : undefined}
+                key={item.name}
+                to={item.href}
+                title={collapsed ? item.name : undefined}
                 className={cn(
                   "relative flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   collapsed ? "justify-center" : "gap-3",
@@ -95,18 +123,18 @@ export function Sidebar({
                   <span className="absolute left-0 top-1/2 h-3/5 w-1 -translate-y-1/2 rounded-r bg-primary" />
                 )}
                 <Icon className="h-5 w-5 shrink-0" />
-                {!collapsed && <span>{item.text}</span>}
+                {!collapsed && <span>{item.name}</span>}
               </Link>
             );
           })}
         </nav>
         
-        <div className="mt-auto p-4">
+        <div className="border-t border-border p-2">
           <button
             onClick={handleLogout}
             title={collapsed ? "Log out" : undefined}
             className={cn(
-              "flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+              "flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10",
               collapsed ? "justify-center" : "gap-3"
             )}
           >

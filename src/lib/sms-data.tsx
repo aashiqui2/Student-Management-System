@@ -22,11 +22,12 @@ export interface Student {
   email: string;
   mobileNumber?: string;
   department?: string;
+  section?: string;
   pursuingYear?: PursuingYear | "";
   hackerRankUsername?: string;
   linkedInUrl?: string;
   githubUrl?: string;
-  instagramUrl?: string;
+  leetcodeUrl?: string;
   startYear?: string;
   endYear?: string;
   profilePicUrl?: string;
@@ -74,11 +75,12 @@ function toStudent(student: StudentApi): Student {
     email: student.email,
     mobileNumber: student.mobileNumber ?? "",
     department: student.department ?? "",
+    section: student.section ?? "",
     pursuingYear: (student.pursuingYear as PursuingYear) ?? "",
     hackerRankUsername: student.hackerRankUsername ?? "",
     linkedInUrl: student.linkedInUrl ?? "",
     githubUrl: student.githubUrl ?? "",
-    instagramUrl: student.instagramUrl ?? "",
+    leetcodeUrl: student.leetcodeUrl ?? "",
     startYear: student.startYear?.toString() ?? "",
     endYear: student.endYear?.toString() ?? "",
     profilePicUrl: student.profilePicUrl ?? "",
@@ -113,6 +115,7 @@ function toStudentCreatePayload(student: Omit<Student, "id">): StudentCreatePayl
     endYear: student.endYear ? Number(student.endYear) : undefined,
     linkedInUrl: student.linkedInUrl || undefined,
     githubUrl: student.githubUrl || undefined,
+    leetcodeUrl: student.leetcodeUrl || undefined,
     instagramUrl: student.instagramUrl || undefined,
   };
 }

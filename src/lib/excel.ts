@@ -56,17 +56,31 @@ export async function parseStudents(file: File): Promise<StudentRow[]> {
     const name = str(pick(row, ["name", "full name", "student name"]));
     const regNo = str(pick(row, ["regno", "reg no", "registration number", "register number"]));
     if (!name && !regNo) continue;
+    
+    const email = str(pick(row, ["email", "email address"]));
+    const section = str(pick(row, ["section", "sec"]));
+    const department = str(pick(row, ["department", "dept"]));
+    const pursuingYearRaw = pick(row, ["pursuingyear", "pursuing year", "year"]);
+    
+    // Normalize pursuing year - handle "Fourth Year", "fourth year", etc.
+    let normalizedPursuingYear = normYear(pursuingYearRaw);
+    if (!normalizedPursuingYear && pursuingYearRaw) {
+      const yearStr = String(pursuingYearRaw).trim().toLowerCase().replace(/\s+/g, " ");
+      normalizedPursuingYear = YEAR_MAP[yearStr] ?? "";
+    }
+    
     out.push({
       name,
       regNo,
-      email: str(pick(row, ["email", "email address"])),
+      email,
       mobileNumber: str(pick(row, ["mobilenumber", "mobile number", "mobile", "phone"])),
-      department: str(pick(row, ["department", "dept"])),
-      pursuingYear: normYear(pick(row, ["pursuingyear", "pursuing year", "year"])),
+      department,
+      section,
+      pursuingYear: normalizedPursuingYear,
       hackerRankUsername: str(pick(row, ["hackerrankusername", "hackerrank username", "hackerrank"])),
       linkedInUrl: str(pick(row, ["linkedinurl", "linkedin url", "linkedin"])),
       githubUrl: str(pick(row, ["githuburl", "github url", "github"])),
-      instagramUrl: str(pick(row, ["instagramurl", "instagram url", "instagram"])),
+      leetcodeUrl: str(pick(row, ["leetcodeurl", "leetcode url", "leetcode"])),
       startYear: str(pick(row, ["startyear", "start year"])),
       endYear: str(pick(row, ["endyear", "end year", "graduation year"])),
     });
@@ -100,11 +114,12 @@ export function downloadStudentTemplate() {
     "email",
     "mobileNumber",
     "department",
+    "section",
     "pursuingYear",
     "hackerRankUsername",
     "linkedInUrl",
     "githubUrl",
-    "instagramUrl",
+    "leetcodeUrl",
     "startYear",
     "endYear",
   ];
@@ -115,11 +130,12 @@ export function downloadStudentTemplate() {
       email: "jane.doe@college.edu",
       mobileNumber: "9876500000",
       department: "CSE",
-      pursuingYear: "THIRD_YEAR",
+      section: "B",
+      pursuingYear: "Third Year",
       hackerRankUsername: "jane_d",
       linkedInUrl: "https://linkedin.com/in/janedoe",
       githubUrl: "https://github.com/janedoe",
-      instagramUrl: "",
+      leetcodeUrl: "https://leetcode.com/janedoe",
       startYear: "2021",
       endYear: "2025",
     },

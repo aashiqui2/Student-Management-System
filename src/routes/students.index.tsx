@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth";
 
 type ImportIssue = {
   row?: number;
@@ -43,7 +44,7 @@ export const Route = createFileRoute("/students/")({
 
 function StudentList() {
   const { summaries, deleteStudent, deleteStudentsBulk, deleteAllStudents } = useSMS();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isStaff } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -109,7 +110,7 @@ function StudentList() {
           <h1 className="text-3xl font-bold tracking-tight">Students</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {isAdmin && (
+          {(isAdmin || isStaff) && (
             <>
               <input
                 ref={fileInput}
@@ -118,13 +119,13 @@ function StudentList() {
                 className="hidden"
                 onChange={handleImport}
               />
-              {selectedIds.size > 0 && (
+              {isAdmin && selectedIds.size > 0 && (
                 <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete Selected ({selectedIds.size})
                 </Button>
               )}
-              {filtered.length > 0 && selectedIds.size === 0 && (
+              {isAdmin && filtered.length > 0 && selectedIds.size === 0 && (
                 <Button variant="destructive" onClick={() => setShowDeleteAllConfirm(true)}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete All
@@ -246,7 +247,11 @@ function StudentList() {
                       </td>
                       <td className="px-5 py-3 font-mono text-xs">{s.regNo}</td>
                       <td className="px-5 py-3">
-                        <Badge variant="secondary">{s.department || "N/A"}</Badge>
+                        <Badge variant="secondary">
+                          {s.department && s.section
+                            ? `${s.department} ${s.section}`
+                            : s.department || "N/A"}
+                        </Badge>
                       </td>
                       <td className="px-5 py-3 text-muted-foreground">
                         {s.pursuingYear
